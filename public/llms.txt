@@ -1,0 +1,32 @@
+# WARIS.DEV — Waris Ali, Full Stack Developer
+
+> Personal portfolio of Waris Ali, a full stack developer. The site presents his skills, experience, working process, and selected projects through an interactive WebGL "digital city" built with Next.js, React, and Three.js. Every page is prerendered static HTML and fully readable without JavaScript.
+
+All content below is available as plain HTML at the linked URLs.
+
+## Main pages
+
+- [Home](https://waris.dev/): Overview — hero introduction, capabilities, selected work, experience timeline, tech stack, and contact call to action.
+- [About](https://waris.dev/about): Background and working philosophy.
+- [Stack](https://waris.dev/stack): Technology stack across frontend, backend, data, and tooling.
+- [Projects](https://waris.dev/projects): Index of selected projects.
+- [Experience](https://waris.dev/experience): Career timeline — roles, systems, and problems solved.
+- [Process](https://waris.dev/process): Working process from idea to deployed product.
+- [Contact](https://waris.dev/contact): Contact details and channels.
+
+## Project case studies
+
+- [Swiftza](https://waris.dev/projects/swiftza)
+- [Zhongfa EV](https://waris.dev/projects/zhongfa-ev)
+- [Zirconia Express](https://waris.dev/projects/zirconia-express)
+
+## Optional
+
+- [Sitemap](https://waris.dev/sitemap.xml)
+- [Robots](https://waris.dev/robots.txt)
+
+## Person
+
+- Name: Waris Ali
+- Role: Full Stack Developer
+- Contact: hello@waris.dev
