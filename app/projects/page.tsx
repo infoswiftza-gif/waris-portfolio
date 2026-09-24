@@ -239,7 +239,7 @@ export default function ProjectsPage() {
                   <b>06</b> / NEXT PROJECT
                 </p>
                 <h2 data-reveal style={{ marginBottom: 14 }}>
-                  Your project could be next.
+                  Your Project Could Be Next.
                 </h2>
                 <p className="lede" data-reveal style={{ margin: '0 auto 34px' }}>
                   From concept to deployed product — let&apos;s define what we&apos;re building.

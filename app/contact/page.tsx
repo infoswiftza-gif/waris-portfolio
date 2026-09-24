@@ -72,7 +72,7 @@ export default function ContactPage() {
               <p className="eyebrow" data-reveal>
                 <b>02</b> / CONNECT
               </p>
-              <h2 data-reveal>The direct lines.</h2>
+              <h2 data-reveal>The Direct Lines.</h2>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 18, marginTop: 52 }}>

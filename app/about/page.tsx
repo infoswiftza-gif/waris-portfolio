@@ -59,7 +59,7 @@ export default function AboutPage() {
               <p className="eyebrow" data-reveal>
                 <b>02</b> / THE WHO
               </p>
-              <h2 data-reveal>Designer&apos;s eye. Engineer&apos;s discipline.</h2>
+              <h2 data-reveal>Designer&apos;s Eye. Engineer&apos;s Discipline.</h2>
               <p className="lede" data-reveal>
                 I care about the details people notice — the pixel-perfect header, the instant page load, the API that never drops a request.
               </p>
@@ -119,7 +119,7 @@ export default function AboutPage() {
               <p className="eyebrow" data-reveal>
                 <b>03</b> / CAPABILITIES
               </p>
-              <h2 data-reveal>What I bring to a project.</h2>
+              <h2 data-reveal>What I Bring To A Project.</h2>
             </div>
 
             <div className="fe-grid" style={{ marginTop: 0 }}>
@@ -222,7 +222,7 @@ export default function AboutPage() {
                   <b>04</b> / NEXT MOVE
                 </p>
                 <h2 data-reveal style={{ marginBottom: 14 }}>
-                  Let&apos;s build something worth shipping.
+                  Let&apos;s Build Something Worth Shipping.
                 </h2>
                 <p className="lede" data-reveal style={{ margin: '0 auto 34px' }}>
                   Have a product, platform, or problem that needs a developer who sees the whole system?

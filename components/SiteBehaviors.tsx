@@ -1,15 +1,26 @@
 'use client';
 import { useEffect } from 'react';
+import { animate } from 'motion/react';
 
-// Lite behaviour layer for sub-pages (mounted once per page render).
-// Mirrors the interaction subsets of the homepage's SiteInteractions
-// (reveals, magnetic buttons, stack constellation, contact terminal) so the
-// standalone pages share the same interactive rhythm without the WebGL city.
+// Behavior + animation layer for sub-pages (mounted once per page render).
+// Data/content is revealed instantly (no blur/entrance animation). Motion.dev
+// is used only for hover micro-interactions (magnetic buttons, chips, cards).
+// The stack constellation + contact terminal logic is kept as-is.
 export default function SiteBehaviors() {
   useEffect(() => {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fine = !matchMedia('(hover: none), (pointer: coarse)').matches;
+    const play: any[] = [];
+    const ios: IntersectionObserver[] = [];
 
-    /* ---------- reveals ---------- */
+    const stopAll = () => {
+      while (play.length) play.pop().stop();
+    };
+    const cleanupIO = () => {
+      while (ios.length) ios.pop().disconnect();
+    };
+
+    /* ---------- text reveal (scroll-triggered fade-up, no blur) ---------- */
     const revealEls = [...document.querySelectorAll<HTMLElement>('[data-reveal]')];
     if (reduced) {
       revealEls.forEach((el) => el.classList.add('in'));
@@ -18,38 +29,86 @@ export default function SiteBehaviors() {
       revealEls.forEach((el) => {
         const sec = el.closest('section, footer') || document.body;
         const n = groups.get(sec) || 0;
-        el.style.transitionDelay = `${Math.min(n * 80, 420)}ms`;
         groups.set(sec, n + 1);
+        el.style.transitionDelay = `${Math.min(n * 80, 420)}ms`;
+
+        const io = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((en) => en.isIntersecting)) return;
+            io.disconnect();
+            el.classList.add('in');
+            el.style.transitionDelay = '';
+          },
+          { threshold: 0.18 }
+        );
+        ios.push(io);
+        io.observe(el);
       });
-      const io = new IntersectionObserver(
-        (entries) => {
-          for (const en of entries) {
-            if (en.isIntersecting) {
-              en.target.classList.add('in');
-              io.unobserve(en.target);
-            }
-          }
-        },
-        { threshold: 0.18 }
-      );
-      revealEls.forEach((el) => io.observe(el));
+      // fail-safe: never strand content hidden
+      setTimeout(() => {
+        revealEls.forEach((el) => {
+          if (!el.classList.contains('in')) el.classList.add('in');
+        });
+      }, 8000);
     }
 
-    /* ---------- magnetic buttons ---------- */
-    if (!reduced && !matchMedia('(hover: none), (pointer: coarse)').matches) {
-      document.querySelectorAll<HTMLElement>('.magnetic').forEach((el) => {
-        const onMove = (e: PointerEvent) => {
-          const r = el.getBoundingClientRect();
-          const dx = e.clientX - (r.left + r.width / 2);
-          const dy = e.clientY - (r.top + r.height / 2);
-          el.style.transform = `translate(${dx * 0.18}px, ${dy * 0.22}px)`;
+    /* ---------- magnetic buttons + spring hovers (fine pointers only) ---------- */
+    if (!reduced && fine) {
+      try {
+        const fly = (el: HTMLElement, kv: any, opts: any, map: Map<HTMLElement, any>) => {
+          const prev = map.get(el);
+          if (prev) prev.stop();
+          const c = animate(el, kv, opts);
+          map.set(el, c);
+          return c;
         };
-        const onLeave = () => {
-          el.style.transform = '';
-        };
-        el.addEventListener('pointermove', onMove);
-        el.addEventListener('pointerleave', onLeave);
-      });
+        const springs = new Map<HTMLElement, any>();
+
+        document.querySelectorAll<HTMLElement>('.btn, .magnetic').forEach((el) => {
+          const move = (tx: number, ty: number, s: number) =>
+            fly(
+              el,
+              { x: tx, y: ty, scale: s },
+              { type: 'spring', stiffness: 220, damping: 18 },
+              springs
+            );
+          el.addEventListener('pointerenter', () => move(0, 0, 1.045));
+          el.addEventListener('pointermove', (e) => {
+            const r = el.getBoundingClientRect();
+            move(
+              (e.clientX - (r.left + r.width / 2)) * 0.18,
+              (e.clientY - (r.top + r.height / 2)) * 0.22,
+              1.045
+            );
+          });
+          el.addEventListener('pointerleave', () => move(0, 0, 1));
+        });
+
+        document.querySelectorAll<HTMLElement>('.chip').forEach((el) => {
+          const pop = (s: number) =>
+            fly(el, { scale: s }, { type: 'spring', stiffness: 340, damping: 18 }, springs);
+          el.addEventListener('pointerenter', () => pop(1.12));
+          el.addEventListener('pointerleave', () => pop(1));
+        });
+
+        document
+          .querySelectorAll<HTMLElement>(
+            '.core-card, .const-panel, .tl-item, .proc-step, .link-card, .term, .pv-card, .pv'
+          )
+          .forEach((el) => {
+            const lift = (y: number, s: number, glow: string) =>
+              fly(
+                el,
+                { y, scale: s, boxShadow: glow },
+                { type: 'spring', stiffness: 280, damping: 20 },
+                springs
+              );
+            el.addEventListener('pointerenter', () =>
+              lift(-5, 1.018, '0 26px 60px -26px rgba(100,245,176,.5)')
+            );
+            el.addEventListener('pointerleave', () => lift(0, 1, '0 0 0 rgba(100,245,176,0)'));
+          });
+      } catch (e) {}
     }
 
     /* ---------- technology constellation (stack page) ---------- */
@@ -204,11 +263,14 @@ export default function SiteBehaviors() {
             { threshold: 0.4 }
           );
           termIO.observe(termBody);
+          ios.push(termIO);
         }
       }
     }
 
     return () => {
+      stopAll();
+      cleanupIO();
       document.body.style.overflow = '';
     };
   }, []);

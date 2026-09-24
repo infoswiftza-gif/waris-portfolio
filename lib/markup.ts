@@ -73,7 +73,7 @@ export const BODY_HTML = `
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow" data-reveal><b>01</b> / THE CORE</p>
-        <h2 data-reveal>More than a developer. I build the system behind the experience.</h2>
+        <h2 data-reveal>More Than A Developer. I Build The System Behind The Experience.</h2>
         <p class="lede" data-reveal>I work across the full stack, connecting thoughtful interfaces with reliable backend systems, structured data, APIs, and modern deployment workflows.</p>
       </div>
       <div class="core-grid">
@@ -99,7 +99,7 @@ export const BODY_HTML = `
       <div class="fe-grid">
         <div>
           <p class="eyebrow" data-reveal><b>02</b> / FRONTEND DISTRICT</p>
-          <h2 data-reveal>Interfaces engineered to feel effortless.</h2>
+          <h2 data-reveal>Interfaces Engineered To Feel Effortless.</h2>
           <p class="lede" data-reveal>From landing pages to complex web applications, I combine strong visual systems with clean component architecture and responsive interactions.</p>
           <div class="chips" style="margin-top:32px" data-reveal>
             <span class="chip">React</span><span class="chip">Next.js</span><span class="chip">TypeScript</span>
@@ -125,7 +125,7 @@ export const BODY_HTML = `
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow" data-reveal><b>03</b> / BACKEND TOWER</p>
-        <h2 data-reveal>The experience is only as strong as the system behind it.</h2>
+        <h2 data-reveal>The Experience Is Only As Strong As The System Behind It.</h2>
       </div>
       <div class="be-grid">
         <div class="arch" data-reveal role="img" aria-label="Architecture flow: client, application, API, business logic, database, cloud">
@@ -165,7 +165,7 @@ export const BODY_HTML = `
         </div>
         <div>
           <p class="eyebrow" data-reveal><b>04</b> / DATA VAULT</p>
-          <h2 data-reveal>Structured data. Reliable systems. Clean architecture.</h2>
+          <h2 data-reveal>Structured Data. Reliable Systems. Clean Architecture.</h2>
           <div class="dflow" data-reveal aria-label="Query flow: query, ORM, database, result">
             <span class="packet" aria-hidden="true"></span>
             <div class="dflow-step"><span class="n">01</span><span class="t">QUERY</span><span class="d">typed requests from the app layer</span></div>
@@ -187,7 +187,7 @@ export const BODY_HTML = `
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow" data-reveal><b>05</b> / PROJECT DISTRICT</p>
-        <h2 data-reveal>Things I've actually built.</h2>
+        <h2 data-reveal>Things I've Actually Built.</h2>
         <p class="lede" data-reveal>Selected projects where design, engineering, and business requirements meet.</p>
       </div>
 
@@ -296,7 +296,7 @@ export const BODY_HTML = `
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow" data-reveal><b>06</b> / EXPERIENCE</p>
-        <h2 data-reveal>A timeline of systems, projects, and problems solved.</h2>
+        <h2 data-reveal>A Timeline Of Systems, Projects, And Problems Solved.</h2>
       </div>
       <div class="tl">
         <div class="tl-item" data-reveal>
@@ -329,7 +329,7 @@ export const BODY_HTML = `
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow" data-reveal><b>07</b> / THE STACK</p>
-        <h2 data-reveal>The tools behind the city.</h2>
+        <h2 data-reveal>The Tools Behind The City.</h2>
         <p class="lede" data-reveal>Hover a technology to see how the systems connect.</p>
       </div>
       <div class="const-grid" id="constGrid">
@@ -401,7 +401,7 @@ export const BODY_HTML = `
     <div class="wrap">
       <div class="section-head">
         <p class="eyebrow" data-reveal><b>08</b> / THE PROCESS</p>
-        <h2 data-reveal>From idea to deployed product.</h2>
+        <h2 data-reveal>From Idea To Deployed Product.</h2>
       </div>
       <div class="proc">
         <div class="proc-rail" aria-hidden="true"></div>
@@ -435,7 +435,7 @@ export const BODY_HTML = `
       <div class="contact-grid">
         <div>
           <p class="eyebrow" data-reveal><b>09</b> / CONTACT TERMINAL</p>
-          <h2 data-reveal>Have something worth building?</h2>
+          <h2 data-reveal>Have Something Worth Building?</h2>
           <p class="lede" data-reveal>Let's turn the idea into a real digital product.</p>
           <div class="hero-actions" style="margin-top:34px" data-reveal>
             <a class="btn btn-primary magnetic" href="mailto:hello@waris.dev">Start a Conversation <span class="arr">→</span></a>

@@ -75,7 +75,7 @@ export default function ExperiencePage() {
               <p className="eyebrow" data-reveal>
                 <b>08</b> / THE PROCESS
               </p>
-              <h2 data-reveal>From idea to deployed product.</h2>
+              <h2 data-reveal>From Idea To Deployed Product.</h2>
             </div>
             <div className="proc">
               <div className="proc-rail" aria-hidden="true"></div>
@@ -112,7 +112,7 @@ export default function ExperiencePage() {
                   <b>09</b> / NOW
                 </p>
                 <h2 data-reveal style={{ marginBottom: 14 }}>
-                  Let&apos;s write the next entry together.
+                  Let&apos;s Write The Next Entry Together.
                 </h2>
                 <div className="hero-actions" data-reveal style={{ justifyContent: 'center', marginBottom: 0 }}>
                   <Link className="btn btn-primary magnetic" href="/contact">

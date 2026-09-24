@@ -48,13 +48,22 @@ const LANDMARKS = [
   { name: 'CONTACT TERMINAL',    pos: [0, 0, -200],   h: 29 },
 ];
 const CAM_KEYS = [
-    { p: 0.00, pos: [0, 5, 16],    look: [0, 9, -12] },
-    { p: 0.18, pos: [0, 6, -13],   look: [0, 10, -40] },
-    { p: 0.36, pos: [0, 7, -45],   look: [0, 11, -72] },
-    { p: 0.52, pos: [0, 6.5, -79], look: [0, 9, -108] },
-    { p: 0.68, pos: [0, 8, -113],  look: [0, 10, -142] },
-    { p: 0.84, pos: [0, 7.5, -147], look: [0, 11, -176] },
-    { p: 1.00, pos: [0, 6, -186],  look: [0, 10, -205] },
+    // ---- whole-city TOUR: follows the road network (avenue + side streets + cross
+    // roads) so the camera flies past every district instead of only down the avenue
+    { p: 0.000, pos: [0, 8.5, 16],    look: [0, 11, -26] },     // 1  avenue entry
+    { p: 0.070, pos: [0, 10, -40],    look: [0, 12, -58] },     // 2  down the avenue — THE CORE ahead
+    { p: 0.140, pos: [0, 10.5, -72],  look: [14, 12, -72] },    // 3  first cross road, ease east
+    { p: 0.220, pos: [30, 11, -70],   look: [30, 12, -86] },    // 4  BACKEND TOWER district (+24,-62)
+    { p: 0.280, pos: [34, 11.5, -72], look: [36, 12, -96] },    // 5  corner, south on the right side street
+    { p: 0.420, pos: [34, 11.5, -96], look: [22, 12, -98] },    // 6  at the DATA VAULT cross road
+    { p: 0.520, pos: [-8, 12, -98],   look: [-22, 12, -98] },   // 7  west ride — DATA VAULT (-24,-96)
+    { p: 0.600, pos: [-34, 12, -100], look: [-36, 12, -122] },  // 8  corner, south on the left side street
+    { p: 0.720, pos: [-34, 12, -124], look: [-20, 12, -126] },  // 9  at the PROJECT cross road
+    { p: 0.820, pos: [4, 12, -124],   look: [24, 12, -132] },   // 10 east ride on the z=-124 road
+    { p: 0.880, pos: [34, 12, -126],  look: [33, 13, -150] },   // 11 PROJECT DISTRICT (+26,-130), then south
+    { p: 0.950, pos: [34, 12, -196],  look: [18, 13, -202] },   // 12 south on the right side street
+    { p: 0.975, pos: [34, 12, -202],  look: [12, 14, -192] },   // 13 at the last cross road, gaze at the terminal
+    { p: 1.000, pos: [0, 12, -212],   look: [0, 16, -184] },    // 14 finale — pull back, CONTACT TERMINAL framed
   ];
 
 /* no-op city API — replaced when WebGL initializes; UI stays functional without it */
@@ -87,10 +96,7 @@ const T = {
 const webglAvailable = () => {
   try {
     const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') || c.getContext('webgl');
-    if (!gl) return false;
-    gl.getExtension('WEBGL_lose_context')?.loseContext();
-    return true;
+    return !!(c.getContext('webgl2') || c.getContext('webgl'));
   } catch { return false; }
 };
 const startCity = () => {
@@ -119,13 +125,25 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     antialias: rendererOpts.antialias ?? true,
     powerPreference: rendererOpts.powerPreference ?? 'high-performance',
   });
+  try {
+    renderer.debug.onShaderError = (gl, program, vShader, fShader) => {
+      const vs = gl.getShaderSource(vShader);
+      const fs = gl.getShaderSource(fShader);
+      const glv = gl.getShaderInfoLog(vShader);
+      const glf = gl.getShaderInfoLog(fShader);
+      console.error('SHADER_FAIL_VS_INFO_LOG:', glv);
+      console.error('SHADER_FAIL_FS_INFO_LOG:', glf);
+      if (fs && fs.length < 60) console.error('SHADER_FAIL_FS_SRC:', fs);
+      console.error('SHADER_FAIL_FS_HEAD:', fs ? fs.slice(0, 400) : 'none');
+    };
+  } catch {}
   renderer.setClearColor(0x03050b, 1);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5)); // capped: big FPS win on high-DPI screens, near-identical look
   renderer.toneMapping = THREE.ACESFilmicToneMapping;      // filmic response for photographic look
   renderer.toneMappingExposure = 0.95;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x03050b, 0.035);
+  scene.fog = new THREE.FogExp2(0x03050b, 0);   // fog off — clear view, city itself carries the atmosphere
 
   /* ---------- built-in photographic night environment (no external HDR fetch — always loads, never blocked) ---------- */
   {
@@ -186,8 +204,8 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     applyEnv(envTex);
   }
 
-  // Sunrise environment, baked up-front so the night → sunrise swap is instant and hitch-free:
-  // violet-to-amber dawn sky, low warm sun above the horizon, stars barely holding on.
+  // light early-morning sky — lingering midnight-blue overhead giving way to soft blue
+  // and a gentle peach glow on the horizon, stars barely holding on.
   const sunriseEnv = (() => {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const ew = 512, eh = 256;
@@ -195,35 +213,35 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     const eg = ec.getContext('2d');
 
     const sky = eg.createLinearGradient(0, 0, 0, eh);
-    sky.addColorStop(0, '#0a0f2e');
-    sky.addColorStop(0.35, '#2b2252');
-    sky.addColorStop(0.62, '#6b4060');
-    sky.addColorStop(0.82, '#c9714c');
-    sky.addColorStop(1, '#1b1126');
+    sky.addColorStop(0, '#0f1735');      // lingering midnight blue up top
+    sky.addColorStop(0.35, '#45628f');   // soft pre-dawn blue
+    sky.addColorStop(0.62, '#a9c2dd');   // pale morning blue
+    sky.addColorStop(0.82, '#ffe0b4');   // gentle warm first light
+    sky.addColorStop(1, '#edbd92');      // soft peach at the horizon
     eg.fillStyle = sky; eg.fillRect(0, 0, ew, eh);
 
-    // strong warm first-light band hugging the horizon
+    // gentle warm first-light band hugging the horizon
     const band = eg.createLinearGradient(0, eh * 0.58, 0, eh * 0.95);
-    band.addColorStop(0, 'rgba(255,150,80,0)');
-    band.addColorStop(0.55, 'rgba(255,140,70,0.4)');
-    band.addColorStop(1, 'rgba(140,70,50,0)');
+    band.addColorStop(0, 'rgba(255,165,110,0)');
+    band.addColorStop(0.55, 'rgba(255,185,130,0.28)');
+    band.addColorStop(1, 'rgba(150,100,70,0)');
     eg.fillStyle = band; eg.fillRect(0, eh * 0.56, ew, eh * 0.42);
 
-    // low warm sun glow — sits where the key light comes from (drives warm glass reflections)
+    // soft warm sun glow — sits where the key light comes from (drives warm glass reflections)
     const sunX = ew * 0.68, sunY = eh * 0.72;
     const sun = eg.createRadialGradient(sunX, sunY, 0, sunX, sunY, 110);
-    sun.addColorStop(0, 'rgba(255,228,184,0.95)');
-    sun.addColorStop(0.18, 'rgba(255,170,110,0.45)');
-    sun.addColorStop(1, 'rgba(255,150,90,0)');
+    sun.addColorStop(0, 'rgba(255,238,200,0.85)');
+    sun.addColorStop(0.18, 'rgba(255,195,140,0.4)');
+    sun.addColorStop(1, 'rgba(255,170,110,0)');
     eg.fillStyle = sun; eg.fillRect(0, 0, ew, eh);
-    eg.fillStyle = '#fff2d8';
+    eg.fillStyle = '#fff0d8';
     eg.beginPath(); eg.arc(sunX, sunY, 9, 0, Math.PI * 2); eg.fill();
 
     // residual cool glow opposite the sun
     const rimX = ew * 0.1, rimY = eh * 0.35;
     const rim = eg.createRadialGradient(rimX, rimY, 0, rimX, rimY, 130);
-    rim.addColorStop(0, 'rgba(150,170,255,0.1)');
-    rim.addColorStop(1, 'rgba(150,170,255,0)');
+    rim.addColorStop(0, 'rgba(160,185,255,0.12)');
+    rim.addColorStop(1, 'rgba(160,185,255,0)');
     eg.fillStyle = rim; eg.fillRect(0, 0, ew, eh);
 
     // faint residual stars, upper sky only
@@ -241,34 +259,32 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     return env;
   })();
 
-  /* ---------- night → sunrise state (scroll-driven: night in the hero, full sunrise once it exits) ---------- */
+  /* ---------- night → light morning (midnight at the top, soft dawn once the hero exits) ---------- */
   const dawn = {
     p: 0, lastApplied: -1, range: 0,
     nightEnv: scene.environment,
     sunriseEnv,
     stars: null as any,
-    clearNight: new THREE.Color(0x03050b), clearSun: new THREE.Color(0x2a1d42),
-    fogNight: new THREE.Color(0x03050b), fogSun: new THREE.Color(0x4d3150),
-    hemiNight: new THREE.Color(0x2a3a5f), hemiSun: new THREE.Color(0x9c7ba0),
-    gndNight: new THREE.Color(0x05070d), gndSun: new THREE.Color(0x33222c),
-    keyNight: new THREE.Color(0x4d8dff), keySun: new THREE.Color(0xffb070),
-    fillNight: new THREE.Color(0x62dcff), fillSun: new THREE.Color(0x86a8ff),
-    rimNight: new THREE.Color(0x8ea8ff), rimSun: new THREE.Color(0xffb088),
+    skyNight: new THREE.Color(0x0c1326), skySun: new THREE.Color(0xffffff),
+    clearNight: new THREE.Color(0x03050b), clearSun: new THREE.Color(0x9fb8d8),
+    fogNight: new THREE.Color(0x03050b), fogSun: new THREE.Color(0x8fa8c8),
+    hemiNight: new THREE.Color(0x2a3a5f), hemiSun: new THREE.Color(0xd9e4f2),
+    gndNight: new THREE.Color(0x05070d), gndSun: new THREE.Color(0x6e655c),
+    keyNight: new THREE.Color(0x4d8dff), keySun: new THREE.Color(0xffd9b0),
+    fillNight: new THREE.Color(0x62dcff), fillSun: new THREE.Color(0xb4c9e6),
+    rimNight: new THREE.Color(0x8ea8ff), rimSun: new THREE.Color(0xc8d6ef),
     _clear: new THREE.Color(0x03050b),
   };
 
-  // Dawn is scoped to the hero: night holds for the first ~12% of the hero scroll,
-  // then eases to full sunrise exactly as the hero leaves the viewport.
+  // Night-only view — no day transition. The city stays moonlit the whole scroll;
+  // scroll now triggers fireworks instead (see the fireworks block).
   const measureDawn = () => {
     const el = document.querySelector('.hero') as HTMLElement | null;
     dawn.range = el ? el.getBoundingClientRect().bottom + (window.scrollY || 0) : innerHeight;
   };
   measureDawn();
   addEventListener('resize', measureDawn, { passive: true });
-  const dawnTarget = () => {
-    const H = dawn.range || innerHeight;
-    return Math.min(1, Math.max(0, ((window.scrollY || 0) - H * 0.12) / (H * 0.88)));
-  };
+  const dawnTarget = () => 0;
 
   const camera = new THREE.PerspectiveCamera(innerWidth <= 560 ? 70 : innerWidth <= 980 ? 64 : 56, innerWidth / innerHeight, 0.1, 420);
   camera.position.set(0, 5, 16);
@@ -305,13 +321,31 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     const t = new THREE.CanvasTexture(c); return t;
   })();
 
+  // crisp firework spark sprite — tight bright core with a fast falloff, so the
+  // explosion reads as sharp glittering points far in the sky instead of a fuzzy blob
+  const sparkTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,1)');
+    gr.addColorStop(0.18, 'rgba(255,255,255,.95)');
+    gr.addColorStop(0.4, 'rgba(255,255,255,.22)');
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+
   const rand = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[(Math.random() * arr.length) | 0];
 
   /* ---------- ULTRA HD FACADE FACTORY (8K quality, photorealistic) ---------- */
   const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
-  const MAX_TEX = Math.min(4096, renderer.capabilities.maxTextureSize);   // 4K is the practical ceiling: 12 unique facade canvases at true 8192 would need ~3GB VRAM and blank the whole scene
-  const TEX_S = tier() <= 0 ? 1024 : tier() <= 1 ? 2048 : tier() <= 2 ? 4096 : MAX_TEX;   // ultra-HD facade textures
+  // Facade textures are capped at 2048: 4096 canvases × 12 unique facades + bump/road
+  // maps exceed ~1GB VRAM on integrated/D3D11 GPUs and blank the whole scene
+  // (context loss — shaders fail to allocate) on slower machines. 2048 still renders
+  // crisp in a screen-scale city view while needing a quarter of the GPU memory.
+  const MAX_TEX = Math.min(2048, renderer.capabilities.maxTextureSize);
+  const TEX_S = tier() <= 0 ? 512 : tier() <= 1 ? 1024 : MAX_TEX;
   const MODULE = 2.4;                        // floor height / window bay, world units
   const CELLS = 16;                          // window cells per canvas edge
   const TILE = MODULE * CELLS;               // world units per canvas repeat
@@ -784,12 +818,22 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     scene.add(sw);
   }
 
-  // cross streets
-  for (let z = 6; z >= -238; z -= 26) {
-    const cross = new THREE.Mesh(new THREE.PlaneGeometry(150, 3), roadMat);
-    cross.rotation.x = -Math.PI / 2; cross.position.set(0, 0.03, z);
+  // ROAD MAP: cross streets every 26 units along z — the city is carved into blocks.
+  const Z_ROADS = [];
+  for (let z = 6; z >= -228; z -= 26) Z_ROADS.push(z);
+  for (const z of Z_ROADS) {
+    const cross = new THREE.Mesh(new THREE.PlaneGeometry(142, 5), roadMat);
+    cross.rotation.x = -Math.PI / 2; cross.position.set(0, 0.028, z);
     cross.receiveShadow = true;
     scene.add(cross);
+  }
+
+  // two north-south side streets branching left & right of the avenue (real map grid)
+  for (const sx of [-34, 34]) {
+    const side = new THREE.Mesh(new THREE.PlaneGeometry(4, 240), roadMat);
+    side.rotation.x = -Math.PI / 2; side.position.set(sx, 0.032, -115);
+    side.receiveShadow = true;
+    scene.add(side);
   }
 
   /* ---------- horizon glow ---------- */
@@ -846,19 +890,167 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     dawn.stars = starsMat;
   }
 
-  /* ---------- procedural buildings (instanced) ---------- */
-  const plots = [];
-  for (let gx = -72; gx <= 72; gx += 9.5) {
-    for (let gz = 12; gz >= -234; gz -= 9.5) {
-      if (Math.abs(gx) < 5) continue;                    // keep the main avenue clear
-      if (Math.random() < 0.12) continue;                // density variance
-      const x = gx + rand(-2.4, 2.4), z = gz + rand(-2.4, 2.4);
-      let nearLandmark = false;
-      for (const L of LANDMARKS) {
-        const dx = x - L.pos[0], dz = z - L.pos[2];
-        if (dx * dx + dz * dz < 121) { nearLandmark = true; break; }
+  /* ---------- real-world sky dome: vertical gradient + soft cloud wisps, tinted by dawn ---------- */
+  const skyMat = (() => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const g = c.getContext('2d');
+    const grad = g.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0.00, '#2c4f8f');    // zenith — deep morning blue
+    grad.addColorStop(0.25, '#5d86bd');    // upper blue
+    grad.addColorStop(0.48, '#a7c6de');    // mid pale blue
+    grad.addColorStop(0.55, '#dfeaf2');    // gentle haze right at the horizon
+    grad.addColorStop(0.62, '#ffe9c0');    // warm first light just above the skyline
+    grad.addColorStop(0.72, '#f7cf9f');    // peach fade below the horizon
+    grad.addColorStop(1.00, '#e2bd8f');
+    g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
+    // soft wispy morning clouds hugging the horizon band
+    for (let i = 0; i < 28; i++) {
+      const y = 120 + Math.random() * 52;
+      const x = Math.random() * 256;
+      const w = 34 + Math.random() * 110;
+      const h = 7 + Math.random() * 18;
+      const wg = g.createLinearGradient(0, y, 0, y + h);
+      wg.addColorStop(0, 'rgba(255,250,240,0)');
+      wg.addColorStop(0.5, `rgba(255,252,246,${0.18 + Math.random() * 0.2})`);
+      wg.addColorStop(1, 'rgba(255,250,240,0)');
+      g.fillStyle = wg;
+      g.beginPath(); g.ellipse(x, y, w, h, 0, 0, Math.PI * 2); g.fill();
+    }
+    const map = new THREE.CanvasTexture(c);
+    map.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshBasicMaterial({ map, color: 0x0c1326, side: THREE.BackSide, fog: false, depthWrite: false });
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), mat);
+    dome.renderOrder = -6;                 // behind every plane/backdrop
+    dome.frustumCulled = false;
+    scene.add(dome);
+    return mat;
+  })();
+
+  /* ---------- scroll fireworks (bursts explode over the city as you scroll) ---------- */
+  const FW = !reduced ? (() => {
+    const MAX = 2600;
+    const pos = new Float32Array(MAX * 3), vel = new Float32Array(MAX * 3);
+    const life = new Float32Array(MAX), col = new Float32Array(MAX * 3);
+    for (let i = 0; i < MAX; i++) pos[i * 3 + 1] = -999;   // park all particles off-scene
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const mat = new THREE.PointsMaterial({
+      size: 2.6, map: sparkTex, transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, depthTest: false, vertexColors: true, fog: false, sizeAttenuation: true,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    scene.add(pts);
+    let cursor = 0, lastY = window.scrollY || 0, accDist = 0, lastT = 0;
+
+    const burst = (bx, by, bz) => {
+      const n = 90 + ((Math.random() * 100) | 0);
+      const c = new THREE.Color(ACCENTS[(Math.random() * ACCENTS.length) | 0]);
+      const speed = 12 + Math.random() * 9;
+      for (let i = 0; i < n; i++) {
+        const idx = cursor; cursor = (cursor + 1) % MAX;
+        pos[idx * 3] = bx; pos[idx * 3 + 1] = by; pos[idx * 3 + 2] = bz;
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        const s = speed * (0.3 + Math.random() * 0.8);
+        vel[idx * 3] = Math.sin(ph) * Math.cos(th) * s;
+        vel[idx * 3 + 1] = Math.cos(ph) * s;
+        vel[idx * 3 + 2] = Math.sin(ph) * Math.sin(th) * s;
+        life[idx] = 0.8 + Math.random() * 1.1;
+        const b = 0.7 + Math.random() * 0.45;
+        col[idx * 3] = c.r * b; col[idx * 3 + 1] = c.g * b; col[idx * 3 + 2] = c.b * b;
       }
-      plots.push({ x, z, nearLandmark });
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.color.needsUpdate = true;
+    };
+
+    // fire a burst high in the sky, far ahead of the camera's view
+    const launch = () => {
+      const d = 185 + Math.random() * 55;               // well out in front — deep sky, clear of buildings
+      const dx = camLook.x - camPos.x, dy = camLook.y - camPos.y, dz = camLook.z - camPos.z;
+      const dl = Math.hypot(dx, dy, dz) || 1;
+      const bx = camPos.x + (dx / dl) * d + rand(-18, 18);
+      const by = Math.max(64, camPos.y + (dy / dl) * d + rand(34, 54));
+      const bz = camPos.z + (dz / dl) * d;
+      burst(bx, by, bz);
+      if (Math.random() < 0.15) {                      // rare second burst, slightly offset
+        const d2 = d + rand(12, 34);
+        burst(camPos.x + (dx / dl) * d2 + rand(-26, 26), Math.max(60, by + rand(-8, 12)), camPos.z + (dz / dl) * d2);
+      }
+    };
+
+    addEventListener('scroll', () => {
+      const y = window.scrollY || 0;
+      accDist += Math.abs(y - lastY);                 // accumulate — Lenis smooth scroll
+      lastY = y;                                       // fires many small deltas per frame
+      if (accDist < 85) return;                        // ...so we burst after ~85px total
+      const t = performance.now();
+      if (t - lastT < 650) return;                     // throttle bursts hard
+      lastT = t;
+      accDist = 0;
+      launch();
+    }, { passive: true });
+
+    const update = dt => {
+      if (dt <= 0) return;
+      for (let i = 0; i < MAX; i++) {
+        if (life[i] <= 0) continue;
+        life[i] -= dt;
+        if (life[i] <= 0) { pos[i * 3 + 1] = -999; continue; }
+        vel[i * 3 + 1] -= 9.8 * dt * 0.55;     // gravity (softened)
+        vel[i * 3] *= 0.99; vel[i * 3 + 1] *= 0.99; vel[i * 3 + 2] *= 0.99;
+        pos[i * 3] += vel[i * 3] * dt;
+        pos[i * 3 + 1] += vel[i * 3 + 1] * dt;
+        pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
+      }
+      geo.attributes.position.needsUpdate = true;
+    };
+
+    return { update, stop: function () {} };
+  })() : null;
+
+  /* ---------- procedural buildings (instanced) ---------- */
+  // ROAD MAP LAYOUT: the city is divided into city blocks by the avenue (x=0),
+  // two north-south side streets (x=±34) and the cross streets (every 26 units on z).
+  // Buildings are placed INSIDE the blocks only — so the whole street grid stays
+  // visible as a real road network instead of being buried under a random building field.
+  const plots = [];
+  const X_BLOCKS = [
+    { x0: -68, x1: -40 },
+    { x0: -29, x1: -8 },
+    { x0: 8,   x1: 29 },
+    { x0: 40,  x1: 68 },
+  ];
+  const ROAD_GAP = 5.0;                      // buildings stay back from every road centre
+  for (let bi = 0; bi < X_BLOCKS.length; bi++) {
+    const XB = X_BLOCKS[bi];
+    for (let zi = 0; zi < Z_ROADS.length - 1; zi++) {
+      const zBot = Z_ROADS[zi] - ROAD_GAP;                 // deep edge of the block
+      const zTop = Z_ROADS[zi + 1] + ROAD_GAP;             // near edge of the block (roads descend)
+      if (zBot <= zTop) continue;
+      const bx0 = Math.min(XB.x0, XB.x1), bx1 = Math.max(XB.x0, XB.x1);
+      const n = 3 + ((Math.random() * 4) | 0);             // 3-6 buildings per block (block density)
+      for (let i = 0; i < n; i++) {
+        if (Math.random() < 0.1) continue;                 // density variance
+        const x = bx0 + (bx1 - bx0) * Math.random();
+        const z = zTop + (zBot - zTop) * Math.random();
+        let nearLandmark = false;
+        for (const L of LANDMARKS) {
+          const dx = x - L.pos[0], dz = z - L.pos[2];
+          if (dx * dx + dz * dz < 121) { nearLandmark = true; break; }
+        }
+        plots.push({ x, z, nearLandmark });
+      }
+    }
+  }
+  // keep a few extra plots hugging each landmark so signpost buildings sit in city
+  for (const L of LANDMARKS) {
+    if (Math.random() < 0.35) continue;
+    for (let i = 0; i < 3 + ((Math.random() * 2) | 0); i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 10 + Math.random() * 8;
+      plots.push({ x: L.pos[0] + Math.cos(a) * r, z: L.pos[2] + Math.sin(a) * r, nearLandmark: true });
     }
   }
   // shuffle so truncation to the target count stays evenly distributed
@@ -925,8 +1117,10 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
 
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
   boxGeo.translate(0, 0.5, 0);
-  // collision proxies: the camera must never clip through a building (resolved per-frame in updateCamera)
-  const CITY_BOXES = builds.map(b => ({ x: b.x, z: b.z, hw: b.w / 2 + 1.1, hd: b.d / 2 + 1.1, h: b.h }));
+  // collision proxies: standoff boxes the camera must never enter (resolved per-frame
+  // in updateCamera). The +2.0 margin keeps a visible gap so the camera turns away
+  // *before* touching a facade instead of grazing it.
+  const CITY_BOXES = builds.map(b => ({ x: b.x, z: b.z, hw: b.w / 2 + 2.0, hd: b.d / 2 + 2.0, h: b.h }));
   for (const L of LANDMARKS) CITY_BOXES.push({ x: L.pos[0], z: L.pos[2], hw: 4.4, hd: 4.4, h: L.h + 2 });
   // subtle bevel on the top edges: catches env light like real architecture
   {
@@ -964,6 +1158,68 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     mesh.receiveShadow = true;
     mesh.instanceMatrix.needsUpdate = true;
     scene.add(mesh);
+  }
+
+  /* ---------- EVERY BUILDING SIGNAGE (service name on the mid facade) ---------- */
+  {
+    // one-tile neon texture per service (cached + shared so ~150 buildings stay cheap)
+    const makeSmallSignTex = (name, color) => {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+      const g = c.getContext('2d');
+      g.fillStyle = '#0a1420'; g.fillRect(0, 0, 512, 256);
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = color; g.fillRect(24, 20, 464, 6);
+      g.font = '900 84px Arial Black, sans-serif';
+      g.shadowColor = color; g.shadowBlur = 22;
+      g.fillStyle = '#ffffff'; g.fillText(name, 256, 122);
+      g.shadowBlur = 8; g.fillText(name, 256, 122);
+      g.shadowBlur = 0;
+      g.fillStyle = color; g.fillRect(64, 208, 384, 5);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+      return t;
+    };
+
+    const SVCS = [
+      { t: 'WEB DEV', c: '#62dcff' }, { t: 'FRONTEND', c: '#62dcff' }, { t: 'BACKEND', c: '#4d8dff' },
+      { t: 'DATABASE', c: '#ffd27a' }, { t: 'E-COMMERCE', c: '#ffd27a' }, { t: 'FULL STACK', c: '#64f5b0' },
+      { t: 'CMS', c: '#62dcff' }, { t: 'SEO', c: '#4d8dff' }, { t: 'API', c: '#64f5b0' }, { t: 'UI/UX', c: '#ffd27a' },
+    ];
+
+    const texCache = new Map();
+    const groups = new Map();                       // service → sign items
+    for (const b of builds) {
+      const s = SVCS[(Math.random() * SVCS.length) | 0];
+      if (!texCache.has(s.t)) texCache.set(s.t, makeSmallSignTex(s.t, s.c));
+      const tex = texCache.get(s.t);
+      const main = b.segs[0];                       // main body (crown sits on top)
+      const signW = Math.min(Math.max(b.w, b.d) * 0.55, 6.5);
+      const signH = signW * 0.5;
+      const east = b.x >= 0;                        // face the corridor strip (avenue / side street)
+      const yaw = east ? -Math.PI / 2 : Math.PI / 2;
+      const sx = b.x + (east ? -b.w / 2 - 0.12 : b.w / 2 + 0.12);
+      const item = { x: sx, y: main[0] + main[1] / 2, z: b.z, w: signW, h: signH, yaw };
+      if (!groups.has(s.t)) groups.set(s.t, []);
+      groups.get(s.t).push(item);
+    }
+
+    const q = new THREE.Quaternion();
+    const M0 = new THREE.Matrix4();
+    const scl = new THREE.Vector3();
+    const pos = new THREE.Vector3();
+    for (const [key, items] of groups) {
+      const mat = new THREE.MeshBasicMaterial({ map: texCache.get(key), transparent: true, fog: false, side: THREE.DoubleSide });
+      const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, items.length);
+      items.forEach((it, i) => {
+        q.setFromEuler(new THREE.Euler(0, it.yaw, 0));
+        scl.set(it.w, it.h, 1);
+        pos.set(it.x, it.y, it.z);
+        M0.compose(pos, q, scl);
+        mesh.setMatrixAt(i, M0);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      scene.add(mesh);
+    }
   }
 
   /* ---------- ULTRA: 3D facade relief (mullion fins, floor ledges, cornices, pilasters) ---------- */
@@ -1780,7 +2036,81 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     }
   }
 
-  /* ---------- TWO-STORY EVENT STRUCTURE (like Yahoo Hotel, Tubi Cabana) ---------- */
+  /* ---------- SERVICES SIGNBOARDS (billboards along the tour with offered services) ---------- */
+  {
+    // two-line neon billboard texture: big service name + small detail sub-line
+    const makeSignTex = (name, sub, color) => {
+      const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+      const g = c.getContext('2d');
+      g.fillStyle = '#0a1420'; g.fillRect(0, 0, 1024, 512);
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = color; g.fillRect(64, 52, 896, 10);
+      g.font = '900 116px Arial Black, sans-serif';
+      g.shadowColor = color; g.shadowBlur = 28;
+      g.fillStyle = '#ffffff'; g.fillText(name, 512, 226);
+      g.shadowBlur = 12; g.fillText(name, 512, 226);
+      g.shadowBlur = 0;
+      g.font = '700 42px Arial, sans-serif';
+      g.fillStyle = '#a9bedf'; g.fillText(sub, 512, 352);
+      g.fillStyle = color; g.fillRect(128, 424, 768, 7);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 16;
+      return t;
+    };
+
+    const signs = [
+      { x: -7,  z: -8,    ry:  Math.PI / 2, name: 'WEB DEVELOPMENT', sub: 'REACT · NEXT.JS · TYPESCRIPT',     color: '#62dcff' },
+      { x: 5,   z: -6,    ry: -Math.PI / 2, name: 'E-COMMERCE',      sub: 'STORES · CHECKOUT · CMS',         color: '#ffd27a' },
+      { x: -23, z: -36,   ry:  Math.PI,     name: 'FRONTEND',        sub: 'INTERFACES · ANIMATIONS · UX',    color: '#62dcff' },
+      { x: 29,  z: -58,   ry: -Math.PI / 2, name: 'BACKEND',         sub: 'REST APIS · AUTH · WEBHOOKS',     color: '#4d8dff' },
+      { x: -29, z: -90,   ry:  Math.PI / 2, name: 'DATABASE',        sub: 'POSTGRESQL · PRISMA · SUPABASE',  color: '#ffd27a' },
+      { x: 22,  z: -136,  ry: -Math.PI / 2, name: 'FULL STACK',      sub: 'SYSTEMS · API · DEPLOYMENT',      color: '#64f5b0' },
+      { x: -15, z: -158,  ry:  0,           name: 'CMS & CONTENT',   sub: 'SANITY · STRUCTURE · PUBLISHING', color: '#62dcff' },
+      { x: -7,  z: -193,  ry:  Math.PI / 2, name: "LET'S BUILD",     sub: 'AVAILABLE · REMOTE FRIENDLY',     color: '#ffd27a' },
+    ];
+
+    const panelMat = new THREE.MeshPhysicalMaterial({
+      color: 0x101c30, roughness: 0.35, metalness: 0.75,
+      clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 1.6,
+    });
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x2a3448, roughness: 0.6, metalness: 0.5 });
+
+    for (const s of signs) {
+      const group = new THREE.Group();
+      group.position.set(s.x, 0, s.z);
+      group.rotation.y = s.ry;
+
+      // support legs
+      for (const lx of [-3.9, 3.9]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 5.4, 0.22), legMat);
+        leg.position.set(lx, 2.7, -0.6);
+        leg.castShadow = true;
+        group.add(leg);
+      }
+      // back panel
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(8.8, 4.6, 0.28), panelMat);
+      panel.position.set(0, 4.4, 0);
+      panel.castShadow = true; panel.receiveShadow = true;
+      group.add(panel);
+
+      // neon text (double-sided so it reads from either side of the street)
+      const tex = makeSignTex(s.name, s.sub, s.color);
+      const textMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide, fog: false });
+      const text = new THREE.Mesh(new THREE.PlaneGeometry(8.2, 4.1), textMat);
+      text.position.set(0, 3.1, 0.19);
+      group.add(text);
+
+      // illuminated top LED strip
+      const led = new THREE.Mesh(new THREE.BoxGeometry(8.8, 0.14, 0.36), new THREE.MeshBasicMaterial({ color: parseInt(s.color.replace('#', '0x')) }));
+      led.position.set(0, 6.7, 0);
+      group.add(led);
+
+      scene.add(group);
+
+      // signed collision so the camera glides around — never through — a billboard
+      CITY_BOXES.push({ x: s.x, z: s.z, hw: 2.2, hd: 2.2, h: 7.5 });
+    }
+  }
   {
     const eventPositions = [
       { x: -25, z: -55, ry: 0.5, name: 'YAHOO HOTEL', accent: '#62dcff' },
@@ -1938,11 +2268,34 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
   city.techGroup = () => {};   // kept for API compatibility (effects removed for realism)
   city.pulse = () => {};       // kept for API compatibility (effects removed for realism)
 
-  const camPos = new THREE.Vector3(0, 5, 16);
+  const camPos = new THREE.Vector3(0, 5, 16);   // raw desired target (path + slalom + parallax)
+  const camSm = new THREE.Vector3(0, 5, 16);    // eased follow position — glides along building edges
   const camLook = new THREE.Vector3(0, 2, 0);
   const posA = new THREE.Vector3(), posB = new THREE.Vector3(), lookA = new THREE.Vector3(), lookB = new THREE.Vector3();
 
-  function updateCamera(t) {
+  // push a point out of every building's standoff box along the axis of least
+  // penetration (iterated so neighbouring boxes settle). Boxes include a clearance
+  // margin, so the camera yields at a distance from the building — never on its face.
+  function pushOutside(v, iters) {
+    for (let iter = 0; iter < iters; iter++) {
+      let moved = false;
+      for (let i = 0; i < CITY_BOXES.length; i++) {
+        const bx = CITY_BOXES[i];
+        if (v.y > bx.h + 1.5) continue;                        // flying above it (clears roof caps/AC units/antennas)
+        const ox = bx.hw - Math.abs(v.x - bx.x);
+        if (ox <= 0) continue;
+        const oz = bx.hd - Math.abs(v.z - bx.z);
+        if (oz <= 0) continue;
+        if (ox <= oz) v.x += (v.x >= bx.x ? 1 : -1) * ox;
+        else v.z += (v.z >= bx.z ? 1 : -1) * oz;
+        moved = true;
+      }
+      if (!moved) break;
+    }
+  }
+
+  function updateCamera(dt) {
+    const t = performance.now();
     const p = smoothP;
     let seg = 0;
     while (seg < CAM_KEYS.length - 2 && p >= CAM_KEYS[seg + 1].p) seg++;
@@ -1952,7 +2305,7 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
     k = k * k * (3 - 2 * k); // smoothstep
     posA.fromArray(a.pos); posB.fromArray(b.pos);
     lookA.fromArray(a.look); lookB.fromArray(b.look);
-    camPos.copy(posA).lerp(posB, k);
+    camPos.copy(posA).lerp(posB, k);           // camPos is now the raw target
     camLook.copy(lookA).lerp(lookB, k);
 
     if (!reduced) {
@@ -1960,13 +2313,12 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
       const e = 1 - Math.pow(1 - introT, 3);
       camPos.z += (1 - e) * 7;
       camPos.y += (1 - e) * 2;
-      // slalom along the avenue: swing the camera toward each building row as it
-      // travels, so the camera passes along the sides of the buildings instead of
-      // flying dead-centre down the street
-      const WAVE = Math.PI * 4.5;    // more frequent side-to-side crossings
-      const AMP = 5.2;               // travels right past the buildings' inner faces
+      // gentle lane-to-lane sway while driving any street of the tour — friendly
+      // enough that it never fights the turns at intersections
+      const WAVE = Math.PI * 4.5;                     // side-to-side crossings
+      const AMP = 2.0;                                // stays within the street, never a facade
       camPos.x += Math.sin(p * WAVE) * AMP;
-      camLook.x += Math.sin(p * WAVE) * AMP * 1.4;   // lean the view toward whichever side we're passing
+      camLook.x += Math.sin(p * WAVE) * AMP * 0.9;    // lean the view slightly with the sway
       // idle drift + mouse parallax
       camPos.y += Math.sin(t * 0.0004) * 0.25;
       smx += (mx - smx) * 0.04; smy += (my - smy) * 0.04;
@@ -1975,29 +2327,39 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
       camLook.x += smx * 1.8;
       camLook.y += -smy * 0.9;
     }
-    // keep the camera near the avenue — the road is the clear corridor (|x| <= 5),
-// so clamp the slalom + mouse drift so the camera hugs the buildings' sides
-// without crossing into the next block; collision below still prevents clipping
-const ROAD_HALF = 6.4;
-    if (camPos.x > ROAD_HALF) camPos.x = ROAD_HALF;
-    else if (camPos.x < -ROAD_HALF) camPos.x = -ROAD_HALF;
-    // never let the camera clip inside a building — push out along the axis of least penetration
-    for (let iter = 0; iter < 3; iter++) {
-      let moved = false;
-      for (let i = 0; i < CITY_BOXES.length; i++) {
-        const bx = CITY_BOXES[i];
-        if (camPos.y > bx.h + 0.6) continue;                        // already flying above it
-        const ox = bx.hw - Math.abs(camPos.x - bx.x);
-        if (ox <= 0) continue;
-        const oz = bx.hd - Math.abs(camPos.z - bx.z);
-        if (oz <= 0) continue;
-        if (ox <= oz) camPos.x += (camPos.x >= bx.x ? 1 : -1) * ox;
-        else camPos.z += (camPos.z >= bx.z ? 1 : -1) * oz;
-        moved = true;
+
+    // turn aside — as soon as a landmark stands directly ahead on the avenue,
+    // ease out to the building's side BEFORE reaching it, so the camera curves
+    // around the facade instead of gliding along it (THE CORE, CONTACT TERMINAL)
+    {
+      const STEER_AHEAD = 34;              // start turning this far before the facade
+      const STEER_GAP = 4.4;               // landmark standoff half-width (matches CITY_BOXES)
+      for (let i = 0; i < LANDMARKS.length; i++) {
+        const L = LANDMARKS[i];
+        const ahead = camPos.z - L.pos[2];
+        if (ahead <= 0 || ahead > STEER_AHEAD) continue;
+        const dx = camPos.x - L.pos[0];
+        if (Math.abs(dx) >= STEER_GAP - 0.3) continue;   // already clear, keep driving
+        const side = dx >= 0 ? 1 : -1;
+        const targetX = L.pos[0] + side * (STEER_GAP + 1.7);
+        camPos.x += (targetX - camPos.x) * 0.7;          // quick, decisive turn aside
       }
-      if (!moved) break;
     }
-    camera.position.copy(camPos);
+    // the tour drives the whole road network (avenue + side streets + cross roads),
+    // so no fixed x clamp — safety comes from the waypoints staying on roads and the
+    // soft collision below, which never lets the camera clip through a facade
+    // collision resolution on the raw target: find the closest standoff point
+    // outside every building, then let the camera *ease* toward it — so it glides
+    // past buildings instead of snapping/jittering through them
+    pushOutside(camPos, 6);
+    // frame-rate-independent exponential smoothing (tau ≈ 55ms). dt=0 (reduced
+    // motion / static redraws) snaps straight to the resolved target.
+    const f = dt > 0 ? 1 - Math.exp(-dt / 0.055) : 1;
+    camSm.lerp(camPos, f);
+    // the eased position can cut a corner of a box while catching up to a target
+    // that jumped past it — resolve it too, so the glide itself never rides through a wall
+    pushOutside(camSm, 4);
+    camera.position.copy(camSm);
     camera.lookAt(camLook);
   }
 
@@ -2011,18 +2373,20 @@ const ROAD_HALF = 6.4;
   }
 
   /* ---------- ULTRA: post-processing (photorealistic bloom + tone mapping) ---------- */
-  let composer = null;
+  let composer = null, bloomPass = null;
   if (!reduced && tier() >= 2) {   // bloom off on phones/small screens — post-processing is the biggest mobile fill-rate cost
     try {
       composer = new EffectComposer(renderer);
       composer.addPass(new RenderPass(scene, camera));
-      // ULTRA: enhanced bloom for realistic light glow
-      composer.addPass(new UnrealBloomPass(
+      // ULTRA: enhanced bloom for realistic light glow — strength is eased down
+      // by applyDawn as daylight arrives so scrolling never blooms into a white-out
+      bloomPass = new UnrealBloomPass(
         new THREE.Vector2(innerWidth / 2, innerHeight / 2),
         0.35,   // strength (dimmed for balanced glow)
         0.5,    // radius
         0.75    // threshold (higher = less bloom)
-      ));
+      );
+      composer.addPass(bloomPass);
       composer.addPass(new OutputPass());
       composer.setSize(innerWidth, innerHeight);
     } catch (err) {
@@ -2039,21 +2403,22 @@ const ROAD_HALF = 6.4;
   function applyDawn(p: number) {
     dawn.p = p;
     renderer.setClearColor(dawn._clear.copy(dawn.clearNight).lerp(dawn.clearSun, p), 1);
+    skyMat.color.copy(dawn.skyNight).lerp(dawn.skySun, p);   // midnight-tinted dome → real morning sky
     scene.fog.color.copy(dawn.fogNight).lerp(dawn.fogSun, p);
     hemi.color.copy(dawn.hemiNight).lerp(dawn.hemiSun, p);
     hemi.groundColor.copy(dawn.gndNight).lerp(dawn.gndSun, p);
-    hemi.intensity = 1.2 + 0.3 * p;
+    hemi.intensity = 1.2 + 0.25 * p;   // light morning — soft, not blazing
     key.color.copy(dawn.keyNight).lerp(dawn.keySun, p);
-    key.intensity = 1.2 + 0.8 * p;
+    key.intensity = 1.2 + 0.5 * p;
     fill.color.copy(dawn.fillNight).lerp(dawn.fillSun, p);
-    fill.intensity = 0.4 + 0.12 * p;
-    warm.intensity = 0.35 + 0.3 * p;
+    fill.intensity = 0.4 + 0.1 * p;
+    warm.intensity = 0.35 + 0.22 * p;
     rim.color.copy(dawn.rimNight).lerp(dawn.rimSun, p);
-    rim.intensity = 0.2 + 0.12 * p;
-    renderer.toneMappingExposure = 0.95 + 0.12 * p;
+    rim.intensity = 0.2 + 0.09 * p;
+    renderer.toneMappingExposure = 0.95 + 0.06 * p;
     if (dawn.stars) dawn.stars.opacity = 0.5 * (1 - Math.min(1, p / 0.55));
     horizon.material.opacity = 0.85 * (1 - p);
-    sunGlow.material.opacity = 0.95 * p;
+    sunGlow.material.opacity = 0.4 * p;    // dim — full-strength glow washed the horizon out
     sunGlow.position.y = 30 - 18 * p;   // sun settles toward the horizon line
     sunGlow.position.x = 46 * p;        // drifts toward the key-light side
     // reversible env swap: scrolling back up returns to the moonlit night reflections
@@ -2074,10 +2439,9 @@ const ROAD_HALF = 6.4;
 
     // intro
     if (introT < 1) introT = Math.min(1, introT + dt / 2.6);
-    scene.fog.density = 0.035 + (1 - introT) * 0.05 - 0.005 * dawn.p;
 
     // smooth scroll already updated externally
-    updateCamera(t);
+    updateCamera(dt);
 
     // shadow frustum follows the camera along the avenue
     key.position.set(camPos.x + 40, 70 - 54 * dawn.p, camPos.z + 20);   // sun drops low at sunrise → long dawn shadows
@@ -2088,6 +2452,8 @@ const ROAD_HALF = 6.4;
     landmarks.forEach(L => {
       L.beaconMat.color.copy(L.accent).multiplyScalar(L.i === activeLandmark ? 1.35 : 0.85);
     });
+
+    if (FW) FW.update(dt);   // evolve scroll fireworks (positions/gravity/life)
 
     if (composer) composer.render(); else renderer.render(scene, camera);
   };
@@ -2103,6 +2469,16 @@ const ROAD_HALF = 6.4;
     addEventListener('resize', renderStatic, { passive: true });
     addEventListener('scroll', renderStatic, { passive: true });
   }
+
+  // GPU safety net: if the browser loses the WebGL context (integrated GPUs /
+  // ANGLE/D3D11 pressure), fall back to the static background instead of
+  // leaving a broken canvas. The scene rebuilds itself with conservative
+  // settings on the next page load.
+  renderer.domElement.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+    console.warn('WebGL context lost — Digital City disabled for this session.');
+    document.body.classList.add('no-webgl');
+  }, { passive: true });
 }
 
 /* ============================================================
@@ -2445,7 +2821,7 @@ requestAnimationFrame(() => requestAnimationFrame(() => {
   document.querySelector('.veil').classList.add('gone');
 }));
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; if (FW) FW.stop(); };
   }, []);
 
   return null;

@@ -99,7 +99,7 @@ export default function StackPage() {
               <p className="eyebrow" data-reveal>
                 <b>03</b> / BACKEND TOWER
               </p>
-              <h2 data-reveal>The experience is only as strong as the system behind it.</h2>
+              <h2 data-reveal>The Experience Is Only As Strong As The System Behind It.</h2>
             </div>
             <div className="be-grid">
               <div className="arch" data-reveal role="img" aria-label="Architecture flow: client, application, API, business logic, database, cloud">
@@ -174,7 +174,7 @@ export default function StackPage() {
                 <p className="eyebrow" data-reveal>
                   <b>04</b> / DATA VAULT
                 </p>
-                <h2 data-reveal>Structured data. Reliable systems. Clean architecture.</h2>
+                <h2 data-reveal>Structured Data. Reliable Systems. Clean Architecture.</h2>
                 <div className="dflow" data-reveal aria-label="Query flow: query, ORM, database, result">
                   <span className="packet" aria-hidden="true"></span>
                   <div className="dflow-step">

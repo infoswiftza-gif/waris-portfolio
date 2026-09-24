@@ -75,7 +75,7 @@ export default function ProcessPage() {
               <p className="eyebrow" data-reveal>
                 <b>02</b> / WHAT THAT MEANS
               </p>
-              <h2 data-reveal>The same steps, whatever the size.</h2>
+              <h2 data-reveal>The Same Steps, Whatever The Size.</h2>
               <p className="lede" data-reveal>
                 Whether it&apos;s a landing page or a full commerce system, the rhythm stays the same — right-sized for the scope.
               </p>
@@ -109,7 +109,7 @@ export default function ProcessPage() {
                   <b>03</b> / STEP ONE
                 </p>
                 <h2 data-reveal style={{ marginBottom: 14 }}>
-                  Ready to discover?
+                  Ready To Discover?
                 </h2>
                 <p className="lede" data-reveal style={{ margin: '0 auto 34px' }}>
                   The first conversation is free, zero pressure, and usually the most useful one.
