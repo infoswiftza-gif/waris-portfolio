@@ -12,6 +12,15 @@ const nextConfig = {
     // legacy file's dynamic object shapes from failing the production build.
     ignoreBuildErrors: true,
   },
+  // Prisma 8 for MongoDB is published as ESM-only `.mjs` and resolves parts of itself
+  // lazily (e.g. the `MongoUnboundNamespace` binding the driver installs on first use).
+  // Letting webpack inline it drops those bindings and the build dies with
+  // "MongoUnboundNamespace is not defined" while collecting page data for any route
+  // that reaches prisma/db.ts. Keeping it external leaves it as a real Node import,
+  // which is how the standalone scripts in scripts/ already load it.
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/orm-mongo', 'mongodb', 'bcryptjs'],
+  },
 };
 
 export default nextConfig;

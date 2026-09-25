@@ -1,20 +1,22 @@
-'use client';
-import { BODY_HTML } from "@/lib/markup";
-import dynamic from "next/dynamic";
+import HomeBody from '@/components/HomeBody';
+import { buildBodyHtml } from '@/lib/markup';
+import { loadHomeContent } from '@/lib/cms/home';
 
-// The Three.js city loads as an async, client-only chunk after hydration —
-// keeps the initial JS small and the main thread free for first paint (PageSpeed).
-const SiteInteractions = dynamic(() => import("@/components/SiteInteractions"), {
-  ssr: false,
-});
+// The project district, timeline and technology constellation are read from
+// MongoDB on every request so the admin CMS is reflected here immediately.
+export const dynamic = 'force-dynamic';
 
-// Home page: markup is injected verbatim from the original build (see lib/markup.ts),
-// and SiteInteractions mounts the ported Three.js city + all UI interactions on top of it.
-export default function Home() {
-  return (
-    <>
-      <div dangerouslySetInnerHTML={{ __html: BODY_HTML }} />
-      <SiteInteractions />
-    </>
-  );
+/**
+ * Home page.
+ *
+ * The 05 · PROJECT DISTRICT, 06 · EXPERIENCE and 07 · THE STACK sections are
+ * rendered from the `projects`, `experience` and `stack_items` collections via
+ * `loadHomeContent()`; the rest of the document is the original hand-written
+ * markup from `lib/markup.ts`. `HomeBody` injects the result and mounts the
+ * ported Three.js city on top of it.
+ */
+export default async function Home() {
+  const home = await loadHomeContent();
+
+  return <HomeBody html={buildBodyHtml(home)} />;
 }

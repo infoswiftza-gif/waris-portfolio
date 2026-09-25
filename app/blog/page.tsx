@@ -4,18 +4,36 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
 import PageHead from '@/components/PageHead';
-import BlogFilter from '@/components/BlogFilter';
-import { getAllPosts, CAT_STYLE } from '@/lib/posts';
+import { cmsDb } from '@/prisma/db';
+import type { BlogPostRow } from '@/lib/cms/types';
 
 export const metadata: Metadata = {
   title: 'Journal — Waris Ali · Notes on building · WARIS.DEV',
   description:
-    'Notes, breakdowns and lessons from building fast, scalable digital products — performance, WebGL, architecture, and the full stack.',
+    'Notes, breakthroughs and lessons from building fast, scalable digital products — performance, architecture, and the full stack.',
 };
 
-export default function BlogPage() {
-  const posts = getAllPosts();
-  const [featured, ...rest] = posts;
+// Rendered per request so post edits made in the CMS show up immediately.
+export const dynamic = 'force-dynamic';
+
+export default async function BlogPage() {
+  // All published posts, newest first.  The editor toggles `published` in the
+  // CMS; drafts never reach this page.  `orderBy` compiles a single sort key,
+  // so newest-first is applied on `publishedAt` and creation time breaks ties.
+  const db = await cmsDb();
+  const published = (await db.orm.blog_posts
+    .where({ published: true })
+    .orderBy({ publishedAt: -1 })
+    .limit(99)
+    .all()) as BlogPostRow[];
+
+  const posts: BlogPostRow[] = [...published].sort(
+    (a, b) => new Date(b.publishedAt ?? 0).getTime() - new Date(a.publishedAt ?? 0).getTime(),
+  );
+
+  // Featured = the single most recent post.
+  const featured = posts[0];
+  const rest = posts.slice(1);
 
   return (
     <>
@@ -29,43 +47,108 @@ export default function BlogPage() {
               index="10"
               label="THE JOURNAL"
               title={<>Notes on building <span className="grad">things that ship.</span></>}
-              lede="Breakdowns and lessons from shipping fast, scalable digital products — performance, WebGL, architecture, and the full stack."
+              lede="Breakdowns and lessons from shipping fast, scalable digital products — performance, architecture, and the full stack."
             />
 
-            <Link
-              href={`/blog/${featured.slug}`}
-              className="blog-feature glass"
-              data-reveal
-              style={{ marginTop: 56 }}
-            >
-              <div className="blog-feature-copy">
-                <div className="post-meta">
-                  <span className="post-cat" style={{ color: CAT_STYLE[featured.category] || 'var(--accent)' }}>
-                    FEATURED · {featured.category}
-                  </span>
-                  <span className="post-date">{featured.date} · {featured.readTime}</span>
+            {featured && (
+              <Link
+                href={`/blog/${featured.slug}`}
+                className="blog-feature glass"
+                data-reveal
+                style={{ marginTop: 56 }}
+              >
+                <div className="blog-feature-copy">
+                  <div className="post-meta">
+                    <span
+                      className="post-cat"
+                      style={{ color: 'var(--accent)' }}
+                    >
+                      FEATURED
+                    </span>
+                    <span className="post-date">
+                      {featured.publishedAt
+                        ? new Date(featured.publishedAt).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : '—'}
+                    </span>
+                  </div>
+                  <h3>{featured.title}</h3>
+                  <p className="post-excerpt">{featured.excerpt}</p>
+                  <div className="post-tags">
+                    {featured.tags?.map((tag: string) => (
+                      <span key={tag} className="chip">{tag}</span>
+                    ))}
+                    <span className="post-read arr">→</span>
+                  </div>
                 </div>
-                <h3>{featured.title}</h3>
-                <p className="post-excerpt">{featured.excerpt}</p>
-                <div className="post-tags">
-                  {featured.tags.map((tag) => (
-                    <span className="chip" key={tag}>{tag}</span>
-                  ))}
-                  <span className="post-read arr">→</span>
-                </div>
+                <div className="blog-feature-num" aria-hidden="true">01</div>
+              </Link>
+            )}
+
+            {/* Heading + full list */}
+            <h2 className="blog-section-title" data-reveal>
+              All notes
+            </h2>
+
+            {rest.length === 0 ? (
+              <div
+                className="glass"
+                style={{ marginTop: 22, textAlign: 'center', padding: '40px 24px' }}
+              >
+                <p style={{ color: 'var(--muted)' }}>No published notes yet.</p>
+                <p style={{ color: 'var(--muted-2)', fontSize: 13, marginTop: 4 }}>
+                  Write one in the CMS: <Link href="/admin/blog">/admin/blog</Link>
+                </p>
               </div>
-              <div className="blog-feature-num" aria-hidden="true">01</div>
-            </Link>
-
-            <h2 className="blog-section-title" data-reveal>All notes</h2>
-
-            <BlogFilter posts={rest} />
+            ) : (
+              rest.map((post) => (
+                <Link
+                  key={String(post._id)}
+                  href={`/blog/${post.slug}`}
+                  className="post-card glass"
+                >
+                  <div className="post-meta">
+                    <span
+                      className="post-cat"
+                      style={{ color: 'var(--accent)' }}
+                    >
+                      {post.title && post.title.length > 20
+                        ? post.title.slice(0, 20) + '…'
+                        : post.title}
+                    </span>
+                    <span className="post-date">
+                      {post.publishedAt
+                        ? new Date(post.publishedAt).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : '—'}
+                    </span>
+                  </div>
+                  <h3>{post.title}</h3>
+                  <p className="post-excerpt">{post.excerpt}</p>
+                  <div className="post-tags">
+                    {post.tags?.map((tag: string) => (
+                      <span key={tag} className="chip">{tag}</span>
+                    ))}
+                    <span className="post-read arr">→</span>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </section>
 
         <section className="section" style={{ paddingTop: '8vh' }}>
           <div className="wrap">
-            <div className="hero-actions" data-reveal style={{ marginBottom: 0 }}>
+            <div
+              className="hero-actions"
+              style={{ marginBottom: 0 }}
+            >
               <Link className="btn btn-primary magnetic" href="/projects">
                 See It In Practice <span className="arr">→</span>
               </Link>

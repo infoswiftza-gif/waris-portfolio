@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Script from 'next/script';
+import type { ReactNode } from 'react';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
@@ -9,26 +10,47 @@ import PostReadingProgress from '@/components/PostReadingProgress';
 import PostToc from '@/components/PostToc';
 import CodeBlock from '@/components/CodeBlock';
 import ShareBar from '@/components/ShareBar';
-import {
-  POSTS,
-  getPost,
-  getHeadings,
-  getRelated,
-  getAdjacent,
-  headingId,
-  CAT_STYLE,
-  type PostBlock,
-} from '@/lib/posts';
+import { cmsDb } from '@/prisma/db';
+import { headingId, type PostBlock } from '@/lib/posts';
+import { markdownToBlocks, parseInline, type InlineToken } from '@/lib/cms/markdown';
+import type { BlogPostRow } from '@/lib/cms/types';
 
-export const dynamicParams = false;
+/**
+ * Public blog post page.
+ *
+ * `BlogPost.content` holds raw Markdown written in the admin textarea, so the
+ * body is parsed into the `PostBlock` union at render time. Known slugs are
+ * prerendered by `generateStaticParams`; `dynamicParams` stays on so a post
+ * published after the build is still reachable instead of 404ing.
+ */
+export const dynamicParams = true;
 
-export function generateStaticParams() {
-  return POSTS.map((post) => ({ slug: post.slug }));
+/** Every query here is scoped to published posts so drafts stay private. */
+async function findPublishedPost(slug: string): Promise<BlogPostRow | null> {
+  const db = await cmsDb();
+  return ((await db.orm.blog_posts
+    .where({ slug, published: true })
+    .first()) ?? null) as BlogPostRow | null;
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
-  const post = getPost(params.slug);
+export async function generateStaticParams() {
+  const db = await cmsDb();
+  const posts = (await db.orm.blog_posts
+    .where({ published: true })
+    .limit(999)
+    .all()) as BlogPostRow[];
+  return posts.map((post) => ({ slug: String(post.slug ?? '') }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await findPublishedPost(slug);
   if (!post) return {};
+
   return {
     title: `${post.title} — WARIS.DEV`,
     description: post.excerpt,
@@ -37,10 +59,39 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
       title: post.title,
       description: post.excerpt,
       type: 'article',
-      publishedTime: post.date,
+      publishedTime: post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
       tags: post.tags,
     },
   };
+}
+
+/** Render inline Markdown tokens as real nodes, never as raw HTML. */
+function renderInline(tokens: InlineToken[]): ReactNode[] {
+  return tokens.map((token, index) => {
+    const key = `${token.kind}-${index}`;
+    switch (token.kind) {
+      case 'strong':
+        return <strong key={key}>{token.value}</strong>;
+      case 'em':
+        return <em key={key}>{token.value}</em>;
+      case 'code':
+        return <code key={key}>{token.value}</code>;
+      case 'link': {
+        const external = /^https?:\/\//i.test(token.href);
+        return (
+          <a
+            key={key}
+            href={token.href}
+            {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+          >
+            {token.value}
+          </a>
+        );
+      }
+      default:
+        return <span key={key}>{token.value}</span>;
+    }
+  });
 }
 
 function Block({ block, id }: { block: PostBlock; id?: string }) {
@@ -48,45 +99,67 @@ function Block({ block, id }: { block: PostBlock; id?: string }) {
     case 'h2':
       return (
         <h2 id={id} className="post-anchor" data-reveal>
-          <a className="post-anchor-link" href={`#${id}`} aria-label={`Link to ${block.text}`}>#</a>
+          <a className="post-anchor-link" href={`#${id}`} aria-label={`Link to ${block.text}`}>
+            #
+          </a>
           {block.text}
         </h2>
       );
     case 'list':
       return (
         <ul>
-          {block.items.map((item) => (
-            <li key={item}>{item}</li>
+          {block.items.map((item, index) => (
+            <li key={index}>{renderInline(parseInline(item))}</li>
           ))}
         </ul>
       );
     case 'quote':
-      return <blockquote>{block.text}</blockquote>;
+      return <blockquote>{renderInline(parseInline(block.text))}</blockquote>;
     case 'code':
       return <CodeBlock text={block.text} />;
     default:
-      return <p>{block.text}</p>;
+      return <p>{renderInline(parseInline(block.text))}</p>;
   }
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = getPost(params.slug);
+export default async function BlogPostPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const post = await findPublishedPost(slug);
   if (!post) notFound();
 
-  const headings = getHeadings(post);
+  const blocks = markdownToBlocks(post.content ?? '');
+  const headings: { text: string; id: string }[] = [];
+  let order = 0;
+  for (const block of blocks) {
+    if (block.type === 'h2') {
+      headings.push({ text: block.text, id: headingId(block.text, order++) });
+    }
+  }
 
-  const { prev, next } = getAdjacent(post);
-  const related = getRelated(post, 2);
+  // Older/newer navigation walks the published list, not the heading ids.
+  const db = await cmsDb();
+  const siblings = (await db.orm.blog_posts
+    .where({ published: true })
+    .orderBy({ publishedAt: -1 })
+    .limit(999)
+    .all()) as BlogPostRow[];
+  const index = siblings.findIndex((row) => String(row.slug ?? '') === slug);
+  const older = index >= 0 ? siblings[index + 1] : undefined;
+  const newer = index > 0 ? siblings[index - 1] : undefined;
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.excerpt,
-    datePublished: post.date,
-    dateModified: post.date,
+    datePublished: post.publishedAt,
+    dateModified: post.publishedAt,
     author: { '@type': 'Person', name: 'Waris Ali', url: 'https://waris.dev' },
-    keywords: post.tags.join(', '),
+    keywords: (post.tags ?? []).join(', '),
   };
 
   return (
@@ -102,18 +175,35 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           </Link>
 
           <div className="section-head" data-reveal>
-            <span className="eyebrow" style={{ color: CAT_STYLE[post.category] || 'var(--accent)' }}>
-              {post.category}<b>·</b>
+            <span
+              className="eyebrow"
+              style={{ color: 'var(--accent)', fontFamily: 'var(--display)' }}
+            >
+              {post.title ? post.title.slice(0, 20) : 'Blog'}
+              <b>·</b>
             </span>
-            <h1 style={{ fontSize: 'clamp(34px,5vw,58px)', margin: '10px 0 20px' }}>{post.title}</h1>
+            <h1 style={{ fontSize: 'clamp(34px,5vw,58px)' }}>{post.title}</h1>
             <p className="lede">{post.excerpt}</p>
           </div>
 
-          <div className="post-meta" style={{ margin: '26px 0 44px' }} data-reveal>
-            <span className="post-date">{post.date} · {post.readTime}</span>
+          <div
+            className="post-meta"
+            style={{ margin: '26px 0 44px' }}
+            data-reveal
+          >
+            <span className="post-date">
+              {post.publishedAt
+                ? new Date(post.publishedAt).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                : '—'}{' '}
+              · {post.readingTime ?? '—'} min read
+            </span>
             <div className="post-tags">
-              {post.tags.map((tag) => (
-                <span className="chip" key={tag}>{tag}</span>
+              {post.tags?.map((tag: string) => (
+                <span key={tag} className="chip">{tag}</span>
               ))}
             </div>
           </div>
@@ -122,7 +212,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             <article className="post-body glass">
               {(() => {
                 let h2i = 0;
-                return post.blocks.map((block, i) => {
+                return blocks.map((block, i) => {
                   const id = block.type === 'h2' ? headingId(block.text, h2i++) : undefined;
                   return <Block key={i} block={block} id={id} />;
                 });
@@ -131,54 +221,24 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
 
             <aside className="post-side">
               <PostToc headings={headings.map((h) => h.text)} />
-              <ShareBar title={post.title} />
+              <ShareBar title={post.title ?? ''} />
             </aside>
           </div>
 
           <section className="post-nav" data-reveal>
-            {prev ? (
-              <Link href={`/blog/${prev.slug}`} className="pn-card glass">
+            {older?.slug && (
+              <Link href={`/blog/${older.slug}`} className="pn-card glass">
                 <span className="pn-label">← Older note</span>
-                <strong>{prev.title}</strong>
+                <strong>{older.title}</strong>
               </Link>
-            ) : (
-              <span className="pn-card pn-empty glass">
-                <span className="pn-label">← Older note</span>
-                <strong>You are at the oldest note.</strong>
-              </span>
             )}
-            {next ? (
-              <Link href={`/blog/${next.slug}`} className="pn-card pn-next glass">
+            {newer?.slug && (
+              <Link href={`/blog/${newer.slug}`} className="pn-card pn-next glass">
                 <span className="pn-label">Newer note →</span>
-                <strong>{next.title}</strong>
+                <strong>{newer.title}</strong>
               </Link>
-            ) : (
-              <span className="pn-card pn-next pn-empty glass">
-                <span className="pn-label">Newer note →</span>
-                <strong>This is the latest note.</strong>
-              </span>
             )}
           </section>
-
-          {related.length > 0 && (
-            <section className="related" data-reveal>
-              <h2 className="blog-section-title">Keep reading</h2>
-              <div className="related-grid">
-                {related.map((p) => (
-                  <Link key={p.slug} href={`/blog/${p.slug}`} className="related-card glass">
-                    <div className="post-meta">
-                      <span className="post-cat" style={{ color: CAT_STYLE[p.category] || 'var(--accent)' }}>
-                        {p.category}
-                      </span>
-                      <span className="post-date">{p.readTime}</span>
-                    </div>
-                    <h3>{p.title}</h3>
-                    <span className="post-read arr">→</span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
 
           <div style={{ marginTop: '48px' }} data-reveal>
             <div className="hero-actions" style={{ marginBottom: 0 }}>
@@ -193,7 +253,11 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         </div>
       </main>
 
-      <Script id="post-jsonld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Script
+        id="post-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       <SiteFooter />
     </>

@@ -4,6 +4,8 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
 import PageHead from '@/components/PageHead';
+import { cmsDb } from '@/prisma/db';
+import type { ExperienceRow } from '@/lib/cms/types';
 
 export const metadata: Metadata = {
   title: 'Experience — Waris Ali · Process & Timeline · WARIS.DEV',
@@ -11,14 +13,26 @@ export const metadata: Metadata = {
     "Waris Ali's journey — a timeline of systems, projects, and problems solved, from first lines of code to full stack systems.",
 };
 
-export default function ExperiencePage() {
+// Rendered per request so timeline edits made in the CMS show up immediately.
+export const dynamic = 'force-dynamic';
+
+export default async function ExperiencePage() {
+  // Ordered `order` ascending so the timeline reads chronologically as the
+  // editor arranged it.  The `Experience` model has no `published` field, so
+  // every entry is public and the admin can toggle drafts only on projects
+  // and blog posts.
+  const db = await cmsDb();
+  const experience = (await db.orm.experience
+    .orderBy({ order: 1 })
+    .limit(50)
+    .all()) as ExperienceRow[];
+
   return (
     <>
       <SiteNav />
       <SiteBehaviors />
 
       <main>
-        {/* ============== TIMELINE ============== */}
         <section className="section" style={{ paddingTop: '22vh' }}>
           <div className="wrap">
             <PageHead
@@ -28,47 +42,40 @@ export default function ExperiencePage() {
               lede="Each phase built on the last — foundations, then products, then whole systems."
             />
 
-            <div className="tl">
-              <div className="tl-item" data-reveal>
-                <span className="tl-dot" aria-hidden="true"></span>
-                <p className="tl-year">2024</p>
-                <h3 className="tl-role">WEB DEVELOPMENT</h3>
-                <p className="tl-desc">Built responsive websites and front-end interfaces — turning design intent into clean, working code and learning the craft end to end.</p>
-                <div className="chips">
-                  <span className="chip">HTML</span>
-                  <span className="chip">CSS</span>
-                  <span className="chip">JavaScript</span>
-                </div>
+            {experience.length === 0 ? (
+              <div
+                className="glass"
+                style={{ marginTop: 24, textAlign: 'center', padding: '48px 24px' }}
+                data-reveal
+              >
+                <p style={{ color: 'var(--muted)', marginBottom: 8 }}>
+                  No published experience entries yet.
+                </p>
+                <p style={{ color: 'var(--muted-2)', fontSize: 14 }}>
+                  Edit them in the CMS: <Link href="/admin/experience">/admin/experience</Link>
+                </p>
               </div>
-              <div className="tl-item" data-reveal>
-                <span className="tl-dot" aria-hidden="true"></span>
-                <p className="tl-year">2025</p>
-                <h3 className="tl-role">SEO + DIGITAL PRODUCTS</h3>
-                <p className="tl-desc">Shipped content-driven platforms with structured data, search-friendly architecture, and CMS-powered publishing workflows.</p>
-                <div className="chips">
-                  <span className="chip">Next.js</span>
-                  <span className="chip">Sanity</span>
-                  <span className="chip">SEO</span>
-                  <span className="chip">CMS</span>
-                </div>
+            ) : (
+              <div className="tl">
+                {experience.map((entry, index) => (
+                  <div key={String(entry._id)} className="tl-item" data-reveal>
+                    <span className="tl-dot" aria-hidden="true"></span>
+                    <p className="tl-year">{entry.year ?? '—'}</p>
+                    <h3 className="tl-role">{entry.title || 'Unknown role'}</h3>
+                    <p className="tl-desc">{entry.description || ''}</p>
+                    <div className="chips">
+                      {(entry.tags ?? []).map((tag: string) => (
+                        <span key={tag} className="chip">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="tl-item" data-reveal>
-                <span className="tl-dot" aria-hidden="true"></span>
-                <p className="tl-year">2026</p>
-                <h3 className="tl-role">FULL STACK DEVELOPMENT</h3>
-                <p className="tl-desc">Designing and building complete systems end to end — interfaces, APIs, databases, authentication, and deployment working as one product.</p>
-                <div className="chips">
-                  <span className="chip">TypeScript</span>
-                  <span className="chip">Node.js</span>
-                  <span className="chip">PostgreSQL</span>
-                  <span className="chip">Prisma</span>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </section>
 
-        {/* ============== HOW I WORK ============== */}
+        {/* HOW I WORK */}
         <section className="section" id="how-i-work">
           <div className="wrap">
             <div className="section-head">
@@ -103,18 +110,29 @@ export default function ExperiencePage() {
           </div>
         </section>
 
-        {/* ============== CTA ============== */}
+        {/* CTA */}
         <section className="section" style={{ paddingTop: '10vh' }}>
           <div className="wrap">
-            <div className="glass" style={{ padding: 'clamp(34px,5vw,56px)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+            <div
+              className="glass"
+              style={{ padding: 'clamp(34px,5vw,56px)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}
+            >
               <div style={{ maxWidth: 640, margin: '0 auto' }}>
-                <p className="eyebrow" data-reveal style={{ justifyContent: 'center' }}>
+                <p
+                  className="eyebrow"
+                  data-reveal
+                  style={{ justifyContent: 'center' }}
+                >
                   <b>09</b> / NOW
                 </p>
                 <h2 data-reveal style={{ marginBottom: 14 }}>
                   Let&apos;s Write The Next Entry Together.
                 </h2>
-                <div className="hero-actions" data-reveal style={{ justifyContent: 'center', marginBottom: 0 }}>
+                <div
+                  className="hero-actions"
+                  data-reveal
+                  style={{ justifyContent: 'center', marginBottom: 0 }}
+                >
                   <Link className="btn btn-primary magnetic" href="/contact">
                     Start a Conversation <span className="arr">→</span>
                   </Link>

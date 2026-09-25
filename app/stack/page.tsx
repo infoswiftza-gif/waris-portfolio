@@ -4,6 +4,8 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
 import PageHead from '@/components/PageHead';
+import { cmsDb } from '@/prisma/db';
+import type { StackItemRow } from '@/lib/cms/types';
 
 export const metadata: Metadata = {
   title: 'Stack — Waris Ali · Technology Map · WARIS.DEV',
@@ -11,14 +13,52 @@ export const metadata: Metadata = {
     'The technology stack Waris Ali works with — frontend, backend, database, CMS, deployment, and the systems that connect them.',
 };
 
-export default function StackPage() {
+// Rendered per request so stack edits made in the CMS show up immediately.
+export const dynamic = 'force-dynamic';
+
+/**
+ * Collapse the flat `stack_items` list into one panel per category.
+ *
+ * The constellation grid is a 3-column board of categories (`.const-grid`), and
+ * the hover graph in `components/SiteInteractions.tsx` resolves connections by
+ * querying `[data-tech]` inside `[data-group]` — so the category belongs on the
+ * panel and each technology is its own `.tnode`. Order is the editor's global
+ * `order`; panels fall back to the canonical category order.
+ */
+const CATEGORY_ORDER = ['FRONTEND', 'BACKEND', 'DATABASE', 'CMS', 'DEPLOYMENT', 'OTHER'];
+
+function groupByCategory(items: StackItemRow[]) {
+  const groups = new Map<string, string[]>();
+
+  for (const item of items) {
+    const category = (item.category ?? 'OTHER').toUpperCase();
+    const name = (item.name ?? '').trim();
+    if (!name) continue;
+    groups.set(category, [...(groups.get(category) ?? []), name]);
+  }
+
+  return [...groups.entries()]
+    .map(([category, names]) => ({ category, names }))
+    .sort((a, b) => {
+      const rank = (key: string) => {
+        const index = CATEGORY_ORDER.indexOf(key);
+        return index === -1 ? CATEGORY_ORDER.length : index;
+      };
+      return rank(a.category) - rank(b.category);
+    });
+}
+
+export default async function StackPage() {
+  const db = await cmsDb();
+  const items = (await db.orm.stack_items.orderBy({ order: 1 }).limit(99).all()) as StackItemRow[];
+  const panels = groupByCategory(items);
+
   return (
     <>
       <SiteNav />
       <SiteBehaviors />
 
       <main>
-        {/* ============== TECHNOLOGY MAP ============== */}
         <section className="section" style={{ paddingTop: '22vh' }}>
           <div className="wrap">
             <PageHead
@@ -29,205 +69,33 @@ export default function StackPage() {
             />
 
             <div className="const-grid" id="constGrid">
-              <div className="const-panel glass" data-group="FRONTEND" data-reveal>
-                <h3>FRONTEND</h3>
-                <svg className="const-lines" aria-hidden="true"></svg>
-                <div className="tnodes">
-                  <button type="button" className="tnode" data-tech="React">React</button>
-                  <button type="button" className="tnode" data-tech="Next.js">Next.js</button>
-                  <button type="button" className="tnode" data-tech="TypeScript">TypeScript</button>
-                  <button type="button" className="tnode" data-tech="JavaScript">JavaScript</button>
-                  <button type="button" className="tnode" data-tech="HTML">HTML</button>
-                  <button type="button" className="tnode" data-tech="CSS">CSS</button>
-                  <button type="button" className="tnode" data-tech="Tailwind">Tailwind</button>
-                </div>
-              </div>
-              <div className="const-panel glass" data-group="BACKEND" data-reveal>
-                <h3>BACKEND</h3>
-                <svg className="const-lines" aria-hidden="true"></svg>
-                <div className="tnodes">
-                  <button type="button" className="tnode" data-tech="Node.js">Node.js</button>
-                  <button type="button" className="tnode" data-tech="Express">Express</button>
-                  <button type="button" className="tnode" data-tech="REST APIs">REST APIs</button>
-                </div>
-              </div>
-              <div className="const-panel glass" data-group="DATABASE" data-reveal>
-                <h3>DATABASE</h3>
-                <svg className="const-lines" aria-hidden="true"></svg>
-                <div className="tnodes">
-                  <button type="button" className="tnode" data-tech="PostgreSQL">PostgreSQL</button>
-                  <button type="button" className="tnode" data-tech="MySQL">MySQL</button>
-                  <button type="button" className="tnode" data-tech="Prisma">Prisma</button>
-                  <button type="button" className="tnode" data-tech="Supabase">Supabase</button>
-                  <button type="button" className="tnode" data-tech="Neon">Neon</button>
-                </div>
-              </div>
-              <div className="const-panel glass" data-group="CMS" data-reveal>
-                <h3>CMS</h3>
-                <svg className="const-lines" aria-hidden="true"></svg>
-                <div className="tnodes">
-                  <button type="button" className="tnode" data-tech="Sanity">Sanity</button>
-                </div>
-              </div>
-              <div className="const-panel glass" data-group="DEPLOYMENT" data-reveal>
-                <h3>DEPLOYMENT</h3>
-                <svg className="const-lines" aria-hidden="true"></svg>
-                <div className="tnodes">
-                  <button type="button" className="tnode" data-tech="Vercel">Vercel</button>
-                  <button type="button" className="tnode" data-tech="Git">Git</button>
-                  <button type="button" className="tnode" data-tech="GitHub">GitHub</button>
-                </div>
-              </div>
-              <div className="const-panel glass" data-group="OTHER" data-reveal>
-                <h3>OTHER</h3>
-                <svg className="const-lines" aria-hidden="true"></svg>
-                <div className="tnodes">
-                  <button type="button" className="tnode" data-tech="SEO">SEO</button>
-                  <button type="button" className="tnode" data-tech="API Integration">API Integration</button>
-                  <button type="button" className="tnode" data-tech="Automation">Automation</button>
-                  <button type="button" className="tnode" data-tech="AI Integration">AI Integration</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============== BACKEND TOWER ============== */}
-        <section className="section" id="backend">
-          <div className="wrap">
-            <div className="section-head">
-              <p className="eyebrow" data-reveal>
-                <b>03</b> / BACKEND TOWER
-              </p>
-              <h2 data-reveal>The Experience Is Only As Strong As The System Behind It.</h2>
-            </div>
-            <div className="be-grid">
-              <div className="arch" data-reveal role="img" aria-label="Architecture flow: client, application, API, business logic, database, cloud">
-                <div className="arch-step">
-                  CLIENT <i>UI / SSR</i>
-                </div>
-                <div className="arch-link" aria-hidden="true"></div>
-                <div className="arch-step">
-                  APPLICATION <i>NEXT.JS</i>
-                </div>
-                <div className="arch-link" aria-hidden="true"></div>
-                <div className="arch-step">
-                  API <i>REST</i>
-                </div>
-                <div className="arch-link" aria-hidden="true"></div>
-                <div className="arch-step">
-                  BUSINESS LOGIC <i>NODE.JS</i>
-                </div>
-                <div className="arch-link" aria-hidden="true"></div>
-                <div className="arch-step">
-                  DATABASE <i>SQL / ORM</i>
-                </div>
-                <div className="arch-link" aria-hidden="true"></div>
-                <div className="arch-step">
-                  CLOUD <i>DEPLOY</i>
-                </div>
-              </div>
-              <div>
-                <div className="chips" data-reveal>
-                  <span className="chip">Node.js</span>
-                  <span className="chip">Express</span>
-                  <span className="chip">Next.js</span>
-                  <span className="chip">REST APIs</span>
-                  <span className="chip">Authentication</span>
-                  <span className="chip">Webhooks</span>
-                  <span className="chip">Server Logic</span>
-                </div>
-                <div className="status-list" data-reveal>
-                  <div className="status-row">
-                    <span className="k">API STATUS</span>
-                    <span className="v">ONLINE</span>
-                  </div>
-                  <div className="status-row">
-                    <span className="k">DATABASE</span>
-                    <span className="v">CONNECTED</span>
-                  </div>
-                  <div className="status-row">
-                    <span className="k">AUTH</span>
-                    <span className="v">SECURE</span>
-                  </div>
-                  <div className="status-row">
-                    <span className="k">DEPLOYMENT</span>
-                    <span className="v">ACTIVE</span>
+              {panels.map((panel) => (
+                <div
+                  key={panel.category}
+                  className="const-panel glass"
+                  data-group={panel.category}
+                  data-reveal
+                >
+                  <h3>{panel.category}</h3>
+                  <svg className="const-lines" aria-hidden="true"></svg>
+                  <div className="tnodes">
+                    {panel.names.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="tnode"
+                        data-tech={name}
+                      >
+                        {name}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============== DATA VAULT ============== */}
-        <section className="section" id="data">
-          <div className="wrap">
-            <div style={{ display: 'grid', gridTemplateColumns: '.9fr 1.1fr', gap: 60, alignItems: 'center', marginTop: 20 }}>
-              <div className="db-stack" style={{ position: 'relative' }} data-reveal aria-hidden="true">
-                <div className="db-glow"></div>
-                <div className="disc"></div>
-                <div className="disc"></div>
-                <div className="disc"></div>
-              </div>
-              <div>
-                <p className="eyebrow" data-reveal>
-                  <b>04</b> / DATA VAULT
-                </p>
-                <h2 data-reveal>Structured Data. Reliable Systems. Clean Architecture.</h2>
-                <div className="dflow" data-reveal aria-label="Query flow: query, ORM, database, result">
-                  <span className="packet" aria-hidden="true"></span>
-                  <div className="dflow-step">
-                    <span className="n">01</span>
-                    <span className="t">QUERY</span>
-                    <span className="d">typed requests from the app layer</span>
-                  </div>
-                  <div className="dflow-step">
-                    <span className="n">02</span>
-                    <span className="t">ORM</span>
-                    <span className="d">Prisma models &amp; migrations</span>
-                  </div>
-                  <div className="dflow-step">
-                    <span className="n">03</span>
-                    <span className="t">DATABASE</span>
-                    <span className="d">structured, indexed, consistent</span>
-                  </div>
-                  <div className="dflow-step">
-                    <span className="n">04</span>
-                    <span className="t">RESULT</span>
-                    <span className="d">fast, predictable responses</span>
-                  </div>
-                </div>
-                <div className="chips" style={{ marginTop: 30 }} data-reveal>
-                  <span className="chip">PostgreSQL</span>
-                  <span className="chip">MySQL</span>
-                  <span className="chip">Prisma</span>
-                  <span className="chip">Supabase</span>
-                  <span className="chip">Neon</span>
-                  <span className="chip">MongoDB</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ============== CTA ============== */}
-        <section className="section" style={{ paddingTop: '8vh' }}>
-          <div className="wrap">
-            <div className="hero-actions" data-reveal style={{ marginBottom: 0 }}>
-              <Link className="btn btn-primary magnetic" href="/projects">
-                See It In Practice <span className="arr">→</span>
-              </Link>
-              <Link className="btn btn-ghost magnetic" href="/process">
-                How I Build
-              </Link>
+              ))}
             </div>
           </div>
         </section>
       </main>
-
-      <div className="tip" id="tip" role="tooltip"></div>
-      <SiteFooter />
     </>
   );
 }

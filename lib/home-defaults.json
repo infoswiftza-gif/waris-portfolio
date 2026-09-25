@@ -1,0 +1,92 @@
+{
+  "$comment": "Seed data for the collections that back the home page. Imported by lib/cms/home.ts (fallback when a collection is still empty) and by scripts/seed-home-content.mjs. Edit here and re-run `npm run seed:home` to push changes into MongoDB.",
+  "projects": [
+    {
+      "title": "Swiftza",
+      "slug": "swiftza",
+      "category": "LUXURY WATCH COMMERCE PLATFORM",
+      "visual": "swiftza",
+      "description": "A premium e-commerce ecosystem designed for luxury watch discovery, product management, content, and conversion-focused shopping experiences.",
+      "liveUrl": "https://swiftza.store",
+      "caseStudyUrl": "/projects/swiftza",
+      "sourceUrl": "",
+      "tags": ["Next.js", "TypeScript", "Sanity", "Database", "API", "E-commerce"],
+      "order": 1,
+      "published": true
+    },
+    {
+      "title": "Zirconia Express",
+      "slug": "zirconia-express",
+      "category": "DENTAL E-COMMERCE PLATFORM",
+      "visual": "zirconia",
+      "description": "A specialized digital platform focused on presenting dental zirconia products through a structured, search-friendly and conversion-focused experience.",
+      "liveUrl": "https://zirconiaexpress.com",
+      "caseStudyUrl": "/projects/zirconia-express",
+      "sourceUrl": "",
+      "tags": ["Web", "SEO", "CMS", "E-commerce", "Content"],
+      "order": 2,
+      "published": true
+    },
+    {
+      "title": "Zhongfa EV",
+      "slug": "zhongfa-ev",
+      "category": "ELECTRIC MOBILITY PLATFORM",
+      "visual": "ev",
+      "description": "A modern digital experience for electric mobility products, combining product presentation, content, SEO, and conversion-focused UX.",
+      "liveUrl": "https://zhongfa-ev.com",
+      "caseStudyUrl": "/projects/zhongfa-ev",
+      "sourceUrl": "",
+      "tags": ["Frontend", "CMS", "SEO", "Responsive UI", "Content"],
+      "order": 3,
+      "published": true
+    }
+  ],
+  "experience": [
+    {
+      "year": 2024,
+      "title": "WEB DEVELOPMENT",
+      "description": "Built responsive websites and front-end interfaces — turning design intent into clean, working code and learning the craft end to end.",
+      "tags": ["HTML", "CSS", "JavaScript"],
+      "order": 1
+    },
+    {
+      "year": 2025,
+      "title": "SEO + DIGITAL PRODUCTS",
+      "description": "Shipped content-driven platforms with structured data, search-friendly architecture, and CMS-powered publishing workflows.",
+      "tags": ["Next.js", "Sanity", "SEO", "CMS"],
+      "order": 2
+    },
+    {
+      "year": 2026,
+      "title": "FULL STACK DEVELOPMENT",
+      "description": "Designing and building complete systems end to end — interfaces, APIs, databases, authentication, and deployment working as one product.",
+      "tags": ["TypeScript", "Node.js", "PostgreSQL", "Prisma"],
+      "order": 3
+    }
+  ],
+  "stack": [
+    { "category": "FRONTEND", "name": "React", "order": 1 },
+    { "category": "FRONTEND", "name": "Next.js", "order": 2 },
+    { "category": "FRONTEND", "name": "TypeScript", "order": 3 },
+    { "category": "FRONTEND", "name": "JavaScript", "order": 4 },
+    { "category": "FRONTEND", "name": "HTML", "order": 5 },
+    { "category": "FRONTEND", "name": "CSS", "order": 6 },
+    { "category": "FRONTEND", "name": "Tailwind", "order": 7 },
+    { "category": "BACKEND", "name": "Node.js", "order": 8 },
+    { "category": "BACKEND", "name": "Express", "order": 9 },
+    { "category": "BACKEND", "name": "REST APIs", "order": 10 },
+    { "category": "DATABASE", "name": "PostgreSQL", "order": 11 },
+    { "category": "DATABASE", "name": "MySQL", "order": 12 },
+    { "category": "DATABASE", "name": "Prisma", "order": 13 },
+    { "category": "DATABASE", "name": "Supabase", "order": 14 },
+    { "category": "DATABASE", "name": "Neon", "order": 15 },
+    { "category": "CMS", "name": "Sanity", "order": 16 },
+    { "category": "DEPLOYMENT", "name": "Vercel", "order": 17 },
+    { "category": "DEPLOYMENT", "name": "Git", "order": 18 },
+    { "category": "DEPLOYMENT", "name": "GitHub", "order": 19 },
+    { "category": "OTHER", "name": "SEO", "order": 20 },
+    { "category": "OTHER", "name": "API Integration", "order": 21 },
+    { "category": "OTHER", "name": "Automation", "order": 22 },
+    { "category": "OTHER", "name": "AI Integration", "order": 23 }
+  ]
+}

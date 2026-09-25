@@ -4,6 +4,8 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
 import PageHead from '@/components/PageHead';
+import { cmsDb } from '@/prisma/db';
+import type { ProjectRow } from '@/lib/cms/types';
 
 export const metadata: Metadata = {
   title: 'Projects — Waris Ali · Project District · WARIS.DEV',
@@ -11,14 +13,25 @@ export const metadata: Metadata = {
     'Selected projects by Waris Ali — Swiftza, Zirconia Express, and Zhongfa EV. Where design, engineering, and business requirements meet.',
 };
 
-export default function ProjectsPage() {
+// Rendered per request so project edits made in the CMS show up immediately.
+export const dynamic = 'force-dynamic';
+
+export default async function ProjectsPage() {
+  // Fetch from MongoDB (Prisma 8 query builder) and filter `published: true`.
+  // Ordered by `order` ascending so editors control the on-page sequence.
+  const db = await cmsDb();
+  const projects = (await db.orm.projects
+    .where({ published: true })
+    .orderBy({ order: 1 })
+    .limit(99)
+    .all()) as ProjectRow[];
+
   return (
     <>
       <SiteNav />
       <SiteBehaviors />
 
       <main>
-        {/* ============== PROJECT DISTRICT ============== */}
         <section className="section" style={{ paddingTop: '22vh' }}>
           <div className="wrap">
             <PageHead
@@ -36,206 +49,138 @@ export default function ProjectsPage() {
               <span className="chip">Content Platforms</span>
             </div>
 
-            {/* PROJECT 01 · Swiftza */}
-            <article className="project glass" data-reveal data-project>
-              <span className="p-index" aria-hidden="true">01</span>
-              <div className="p-visual">
-                <div className="pv pv-swiftza" role="img" aria-label="Swiftza interface preview — luxury watch commerce platform">
-                  <div className="pv-chrome">
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                    <span className="url">swiftza.store</span>
-                    <div className="pv-badges">
-                      <span className="b-live">LIVE</span>
-                      <span>CASE STUDY</span>
-                      <span>SOURCE</span>
-                    </div>
-                  </div>
-                  <div className="pv-body">
-                    <div className="pv-hero">
-                      <span className="wm">SWIFTZA</span>
-                      <span className="sk tl"></span>
-                    </div>
-                    <div className="pv-watch">
-                      <div className="pv-card">
-                        <span className="face"></span>
-                        <span className="lines">
-                          <span className="sk"></span>
-                          <span className="sk dim"></span>
-                        </span>
-                        <span className="price"></span>
-                      </div>
-                      <div className="pv-card">
-                        <span className="face"></span>
-                        <span className="lines">
-                          <span className="sk"></span>
-                          <span className="sk dim"></span>
-                        </span>
-                        <span className="price"></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {projects.length === 0 ? (
+              <div
+                className="glass"
+                style={{ marginTop: 24, textAlign: 'center', padding: '48px 24px' }}
+                data-reveal
+              >
+                <p style={{ color: 'var(--muted)', marginBottom: 8 }}>
+                  No published projects yet.
+                </p>
+                <p style={{ color: 'var(--muted-2)', fontSize: 14 }}>
+                  Add one in the admin CMS: <Link href="/admin/projects">/admin/projects</Link>
+                </p>
               </div>
-              <div className="p-info">
-                <span className="cat">LUXURY WATCH COMMERCE PLATFORM</span>
-                <h3>Swiftza</h3>
-                <p>A premium e-commerce ecosystem designed for luxury watch discovery, product management, content, and conversion-focused shopping experiences.</p>
-                <div className="p-actions">
-                  <a className="btn btn-primary btn-sm magnetic" href="https://swiftza.store" target="_blank" rel="noopener" aria-label="View Swiftza project">
-                    View Project <span className="arr">→</span>
-                  </a>
-                  <Link className="btn btn-ghost btn-sm magnetic" href="/projects/swiftza" aria-label="Open Swiftza case study">
-                    Case Study <span className="arr">↗</span>
-                  </Link>
-                </div>
-                <div className="chips p-tech">
-                  <span className="chip">Next.js</span>
-                  <span className="chip">TypeScript</span>
-                  <span className="chip">Sanity</span>
-                  <span className="chip">Database</span>
-                  <span className="chip">API</span>
-                  <span className="chip">E-commerce</span>
-                </div>
-              </div>
-            </article>
+            ) : (
+              projects.map((project, index) => (
+                <article
+                  key={String(project._id)}
+                  className="project glass"
+                  data-reveal
+                  data-project
+                  style={{ marginTop: index === 0 ? 0 : 46 }}
+                >
+                  <span className="p-index" aria-hidden="true">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
 
-            {/* PROJECT 02 · Zirconia Express */}
-            <article className="project glass" data-reveal data-project>
-              <span className="p-index" aria-hidden="true">02</span>
-              <div className="p-visual">
-                <div className="pv pv-zirconia" role="img" aria-label="Zirconia Express interface preview — dental e-commerce platform">
-                  <div className="pv-chrome">
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                    <span className="url">zirconiaexpress.com</span>
-                    <div className="pv-badges">
-                      <span className="b-live">LIVE</span>
-                      <span>CASE STUDY</span>
-                      <span>SOURCE</span>
+                  <div
+                    className="p-visual"
+                    style={{ background: 'var(--bg-2)', borderColor: 'var(--line)' }}
+                  >
+                    {/* Visual is decorative — the on-image intent is carried by
+                    the imageUrl / liveUrl fields. Render an inline SVG so the
+                    page never 404s on a missing file. The `visual` field picks
+                    which mockup to draw, exactly like the home page does. */}
+                    <div
+                      className={`pv pv-${project.visual || 'default'}`}
+                      role="img"
+                      aria-label={`${project.title ?? 'Project'} preview`}
+                    >
+                      <div className="pv-chrome">
+                        <i />
+                        <i />
+                        <i />
+                        <span className="url">{project.liveUrl || '/'}</span>
+                        <div className="pv-badges">
+                          <span className="b-live">LIVE</span>
+                          <span>CASE STUDY</span>
+                          <span>SOURCE</span>
+                        </div>
+                      </div>
+                      <div className="pv-body">
+                        <div className="pv-hero">
+                          <span className="wm">{project.title || 'PROJECT'}</span>
+                          <span className="sk tl" />
+                        </div>
+                        <div className="pv-watch">
+                          <div className="pv-card">
+                            <span className="face" />
+                            <span className="lines">
+                              <span className="sk" />
+                              <span className="sk dim" />
+                            </span>
+                            <span className="price" />
+                          </div>
+                          <div className="pv-card">
+                            <span className="face" />
+                            <span className="lines">
+                              <span className="sk" />
+                              <span className="sk dim" />
+                            </span>
+                            <span className="price" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="pv-body">
-                    <div className="side">
-                      <span className="sk" style={{ width: '70%' }}></span>
-                      <span className="sk dim"></span>
-                      <span className="sk dim"></span>
-                      <span className="sk dim"></span>
-                      <span className="sk dim"></span>
-                    </div>
-                    <div className="cat">
-                      <div className="zc">
-                        <i></i>
-                      </div>
-                      <div className="zc">
-                        <i></i>
-                      </div>
-                      <div className="zc">
-                        <i></i>
-                      </div>
-                      <div className="zc">
-                        <i></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-info">
-                <span className="cat">DENTAL E-COMMERCE PLATFORM</span>
-                <h3>Zirconia Express</h3>
-                <p>A specialized digital platform focused on presenting dental zirconia products through a structured, search-friendly and conversion-focused experience.</p>
-                <div className="p-actions">
-                  <a className="btn btn-primary btn-sm magnetic" href="https://zirconiaexpress.com" target="_blank" rel="noopener" aria-label="View Zirconia Express project">
-                    View Project <span className="arr">→</span>
-                  </a>
-                  <Link className="btn btn-ghost btn-sm magnetic" href="/projects/zirconia-express" aria-label="Open Zirconia Express case study">
-                    Case Study <span className="arr">↗</span>
-                  </Link>
-                </div>
-                <div className="chips p-tech">
-                  <span className="chip">Web</span>
-                  <span className="chip">SEO</span>
-                  <span className="chip">CMS</span>
-                  <span className="chip">E-commerce</span>
-                  <span className="chip">Content</span>
-                </div>
-              </div>
-            </article>
 
-            {/* PROJECT 03 · Zhongfa EV */}
-            <article className="project glass" data-reveal data-project>
-              <span className="p-index" aria-hidden="true">03</span>
-              <div className="p-visual">
-                <div className="pv pv-ev" role="img" aria-label="Zhongfa EV interface preview — electric mobility platform">
-                  <div className="pv-chrome">
-                    <i></i>
-                    <i></i>
-                    <i></i>
-                    <span className="url">zhongfa-ev.com</span>
-                    <div className="pv-badges">
-                      <span className="b-live">LIVE</span>
-                      <span>CASE STUDY</span>
-                      <span>SOURCE</span>
+                  <div className="p-info">
+                    <span className="cat">
+                      {project.category || (project.description || '').slice(0, 60) || 'PROJECT'}
+                    </span>
+                    <h3 style={{ fontFamily: 'var(--display)' }}>{project.title || 'Untitled'}</h3>
+                    <p className="lede" style={{ maxWidth: 440 }}>
+                      {project.description || 'No description yet.'}
+                    </p>
+                    <div className="p-actions">
+                      {project.liveUrl && (
+                        <a
+                          className="btn btn-primary btn-sm magnetic"
+                          href={project.liveUrl}
+                          target="_blank"
+                          rel="noopener"
+                          aria-label={`View ${project.title} project`}
+                        >
+                          View Project <span className="arr">→</span>
+                        </a>
+                      )}
+                      <Link
+                        className="btn btn-ghost btn-sm magnetic"
+                        href={`/projects/${project.slug || project.title}`}
+                        aria-label={`Open ${project.title} case study`}
+                      >
+                        Case Study <span className="arr">↗</span>
+                      </Link>
+                    </div>
+                    <div className="chips p-tech">
+                      {project.tags?.map((tag: string) => (
+                        <span key={tag} className="chip">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <div className="pv-body">
-                    <div className="stage">
-                      <span className="beam"></span>
-                      <span className="car"></span>
-                    </div>
-                    <div className="pv-specs">
-                      <div className="row">
-                        <span className="lb">RANGE</span>
-                        <span className="bar" style={{ ['--w' as string]: '78%' }}></span>
-                      </div>
-                      <div className="row">
-                        <span className="lb">CHARGE</span>
-                        <span className="bar" style={{ ['--w' as string]: '56%' }}></span>
-                      </div>
-                      <div className="row">
-                        <span className="lb">MOTOR</span>
-                        <span className="bar" style={{ ['--w' as string]: '66%' }}></span>
-                      </div>
-                      <div className="row">
-                        <span className="lb">CONNECT</span>
-                        <span className="bar" style={{ ['--w' as string]: '44%' }}></span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-info">
-                <span className="cat">ELECTRIC MOBILITY PLATFORM</span>
-                <h3>Zhongfa EV</h3>
-                <p>A modern digital experience for electric mobility products, combining product presentation, content, SEO, and conversion-focused UX.</p>
-                <div className="p-actions">
-                  <a className="btn btn-primary btn-sm magnetic" href="https://zhongfa-ev.com" target="_blank" rel="noopener" aria-label="View Zhongfa EV project">
-                    View Project <span className="arr">→</span>
-                  </a>
-                  <Link className="btn btn-ghost btn-sm magnetic" href="/projects/zhongfa-ev" aria-label="Open Zhongfa EV case study">
-                    Case Study <span className="arr">↗</span>
-                  </Link>
-                </div>
-                <div className="chips p-tech">
-                  <span className="chip">Frontend</span>
-                  <span className="chip">CMS</span>
-                  <span className="chip">SEO</span>
-                  <span className="chip">Responsive UI</span>
-                  <span className="chip">Content</span>
-                </div>
-              </div>
-            </article>
+                </article>
+              ))
+            )}
           </div>
         </section>
 
-        {/* ============== CTA ============== */}
+        {/* CTA */}
         <section className="section" style={{ paddingTop: '10vh' }}>
           <div className="wrap">
-            <div className="glass" style={{ padding: 'clamp(34px,5vw,56px)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+            <div
+              className="glass"
+              style={{ padding: 'clamp(34px,5vw,56px)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}
+            >
               <div style={{ maxWidth: 640, margin: '0 auto' }}>
-                <p className="eyebrow" data-reveal style={{ justifyContent: 'center' }}>
+                <p
+                  className="eyebrow"
+                  data-reveal
+                  style={{ justifyContent: 'center' }}
+                >
                   <b>06</b> / NEXT PROJECT
                 </p>
                 <h2 data-reveal style={{ marginBottom: 14 }}>
@@ -244,7 +189,11 @@ export default function ProjectsPage() {
                 <p className="lede" data-reveal style={{ margin: '0 auto 34px' }}>
                   From concept to deployed product — let&apos;s define what we&apos;re building.
                 </p>
-                <div className="hero-actions" data-reveal style={{ justifyContent: 'center', marginBottom: 0 }}>
+                <div
+                  className="hero-actions"
+                  data-reveal
+                  style={{ justifyContent: 'center', marginBottom: 0 }}
+                >
                   <Link className="btn btn-primary magnetic" href="/contact">
                     Start a Conversation <span className="arr">→</span>
                   </Link>

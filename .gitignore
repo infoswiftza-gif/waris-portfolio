@@ -9,3 +9,8 @@ lh-perf.json
 .env
 .env.*
 !.env.example
+node_modules/
+dist/
+tmp-*.mjs
+tmp-*.ps1
+.prisma/

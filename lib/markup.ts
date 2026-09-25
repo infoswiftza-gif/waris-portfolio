@@ -3,6 +3,14 @@
 // class name, data attribute and inline style survives the TS port unchanged — the vanilla
 // interaction script in components/SiteInteractions.tsx queries this DOM exactly like the
 // original querySelector-based code did, so the UI/behaviour is not rewritten, only relocated.
+//
+// Three regions are now CMS-driven and emitted as `<!--__HOME_*__-->` placeholders that
+// `buildBodyHtml()` swaps for markup rendered from the `projects`, `experience` and
+// `stack_items` collections (see `lib/cms/home.ts`). Every other byte of the document is
+// still the original hand-written markup, so the WebGL city, the HUD landmark tour and
+// the constellation hover graph keep working against exactly the DOM they were written for.
+import type { HomeContent, HomeExperience, HomeProject, HomeStackGroup } from './cms/home';
+
 export const BODY_HTML = `
 
 <!-- fixed WebGL city (decorative) -->
@@ -193,103 +201,7 @@ export const BODY_HTML = `
         <p class="lede" data-reveal>Selected projects where design, engineering, and business requirements meet.</p>
       </div>
 
-      <!-- PROJECT 01 · Swiftza -->
-      <article class="project glass" data-reveal data-project>
-        <span class="p-index" aria-hidden="true">01</span>
-        <div class="p-visual">
-          <div class="pv pv-swiftza" role="img" aria-label="Swiftza interface preview — luxury watch commerce platform">
-            <div class="pv-chrome"><i></i><i></i><i></i><span class="url">swiftza.store</span>
-              <div class="pv-badges"><span class="b-live">LIVE</span><span>CASE STUDY</span><span>SOURCE</span></div>
-            </div>
-            <div class="pv-body">
-              <div class="pv-hero"><span class="wm">SWIFTZA</span><span class="sk tl"></span></div>
-              <div class="pv-watch">
-                <div class="pv-card"><span class="face"></span><span class="lines"><span class="sk"></span><span class="sk dim"></span></span><span class="price"></span></div>
-                <div class="pv-card"><span class="face"></span><span class="lines"><span class="sk"></span><span class="sk dim"></span></span><span class="price"></span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="p-info">
-          <span class="cat">LUXURY WATCH COMMERCE PLATFORM</span>
-          <h3>Swiftza</h3>
-          <p>A premium e-commerce ecosystem designed for luxury watch discovery, product management, content, and conversion-focused shopping experiences.</p>
-          <div class="p-actions">
-            <a class="btn btn-primary btn-sm magnetic" href="https://swiftza.store" target="_blank" rel="noopener" aria-label="View Swiftza project">View Project <span class="arr">→</span></a>
-            <a class="btn btn-ghost btn-sm magnetic" href="/projects/swiftza" aria-label="Open Swiftza case study">Case Study <span class="arr">↗</span></a>
-          </div>
-          <div class="chips p-tech">
-            <span class="chip">Next.js</span><span class="chip">TypeScript</span><span class="chip">Sanity</span>
-            <span class="chip">Database</span><span class="chip">API</span><span class="chip">E-commerce</span>
-          </div>
-        </div>
-      </article>
-
-      <!-- PROJECT 02 · Zirconia Express -->
-      <article class="project glass" data-reveal data-project>
-        <span class="p-index" aria-hidden="true">02</span>
-        <div class="p-visual">
-          <div class="pv pv-zirconia" role="img" aria-label="Zirconia Express interface preview — dental e-commerce platform">
-            <div class="pv-chrome"><i></i><i></i><i></i><span class="url">zirconiaexpress.com</span>
-              <div class="pv-badges"><span class="b-live">LIVE</span><span>CASE STUDY</span><span>SOURCE</span></div>
-            </div>
-            <div class="pv-body">
-              <div class="side"><span class="sk" style="width:70%"></span><span class="sk dim"></span><span class="sk dim"></span><span class="sk dim"></span><span class="sk dim"></span></div>
-              <div class="cat">
-                <div class="zc"><i></i></div><div class="zc"><i></i></div>
-                <div class="zc"><i></i></div><div class="zc"><i></i></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="p-info">
-          <span class="cat">DENTAL E-COMMERCE PLATFORM</span>
-          <h3>Zirconia Express</h3>
-          <p>A specialized digital platform focused on presenting dental zirconia products through a structured, search-friendly and conversion-focused experience.</p>
-          <div class="p-actions">
-            <a class="btn btn-primary btn-sm magnetic" href="https://zirconiaexpress.com" target="_blank" rel="noopener" aria-label="View Zirconia Express project">View Project <span class="arr">→</span></a>
-            <a class="btn btn-ghost btn-sm magnetic" href="/projects/zirconia-express" aria-label="Open Zirconia Express case study">Case Study <span class="arr">↗</span></a>
-          </div>
-          <div class="chips p-tech">
-            <span class="chip">Web</span><span class="chip">SEO</span><span class="chip">CMS</span>
-            <span class="chip">E-commerce</span><span class="chip">Content</span>
-          </div>
-        </div>
-      </article>
-
-      <!-- PROJECT 03 · Zhongfa EV -->
-      <article class="project glass" data-reveal data-project>
-        <span class="p-index" aria-hidden="true">03</span>
-        <div class="p-visual">
-          <div class="pv pv-ev" role="img" aria-label="Zhongfa EV interface preview — electric mobility platform">
-            <div class="pv-chrome"><i></i><i></i><i></i><span class="url">zhongfa-ev.com</span>
-              <div class="pv-badges"><span class="b-live">LIVE</span><span>CASE STUDY</span><span>SOURCE</span></div>
-            </div>
-            <div class="pv-body">
-              <div class="stage"><span class="beam"></span><span class="car"></span></div>
-              <div class="pv-specs">
-                <div class="row"><span class="lb">RANGE</span><span class="bar" style="--w:78%"></span></div>
-                <div class="row"><span class="lb">CHARGE</span><span class="bar" style="--w:56%"></span></div>
-                <div class="row"><span class="lb">MOTOR</span><span class="bar" style="--w:66%"></span></div>
-                <div class="row"><span class="lb">CONNECT</span><span class="bar" style="--w:44%"></span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="p-info">
-          <span class="cat">ELECTRIC MOBILITY PLATFORM</span>
-          <h3>Zhongfa EV</h3>
-          <p>A modern digital experience for electric mobility products, combining product presentation, content, SEO, and conversion-focused UX.</p>
-          <div class="p-actions">
-            <a class="btn btn-primary btn-sm magnetic" href="https://zhongfa-ev.com" target="_blank" rel="noopener" aria-label="View Zhongfa EV project">View Project <span class="arr">→</span></a>
-            <a class="btn btn-ghost btn-sm magnetic" href="/projects/zhongfa-ev" aria-label="Open Zhongfa EV case study">Case Study <span class="arr">↗</span></a>
-          </div>
-          <div class="chips p-tech">
-            <span class="chip">Frontend</span><span class="chip">CMS</span><span class="chip">SEO</span>
-            <span class="chip">Responsive UI</span><span class="chip">Content</span>
-          </div>
-        </div>
-      </article>
+        <!--__HOME_PROJECTS__-->
     </div>
   </section>
 
@@ -301,27 +213,7 @@ export const BODY_HTML = `
         <h2 data-reveal>A Timeline Of Systems, Projects, And Problems Solved.</h2>
       </div>
       <div class="tl">
-        <div class="tl-item" data-reveal>
-          <span class="tl-dot" aria-hidden="true"></span>
-          <p class="tl-year">2024</p>
-          <h3 class="tl-role">WEB DEVELOPMENT</h3>
-          <p class="tl-desc">Built responsive websites and front-end interfaces — turning design intent into clean, working code and learning the craft end to end.</p>
-          <div class="chips"><span class="chip">HTML</span><span class="chip">CSS</span><span class="chip">JavaScript</span></div>
-        </div>
-        <div class="tl-item" data-reveal>
-          <span class="tl-dot" aria-hidden="true"></span>
-          <p class="tl-year">2025</p>
-          <h3 class="tl-role">SEO + DIGITAL PRODUCTS</h3>
-          <p class="tl-desc">Shipped content-driven platforms with structured data, search-friendly architecture, and CMS-powered publishing workflows.</p>
-          <div class="chips"><span class="chip">Next.js</span><span class="chip">Sanity</span><span class="chip">SEO</span><span class="chip">CMS</span></div>
-        </div>
-        <div class="tl-item" data-reveal>
-          <span class="tl-dot" aria-hidden="true"></span>
-          <p class="tl-year">2026</p>
-          <h3 class="tl-role">FULL STACK DEVELOPMENT</h3>
-          <p class="tl-desc">Designing and building complete systems end to end — interfaces, APIs, databases, authentication, and deployment working as one product.</p>
-          <div class="chips"><span class="chip">TypeScript</span><span class="chip">Node.js</span><span class="chip">PostgreSQL</span><span class="chip">Prisma</span></div>
-        </div>
+        <!--__HOME_EXPERIENCE__-->
       </div>
     </div>
   </section>
@@ -335,65 +227,7 @@ export const BODY_HTML = `
         <p class="lede" data-reveal>Hover a technology to see how the systems connect.</p>
       </div>
       <div class="const-grid" id="constGrid">
-        <div class="const-panel glass" data-group="FRONTEND" data-reveal>
-          <h3>FRONTEND</h3>
-          <svg class="const-lines" aria-hidden="true"></svg>
-          <div class="tnodes">
-            <button type="button" class="tnode" data-tech="React">React</button>
-            <button type="button" class="tnode" data-tech="Next.js">Next.js</button>
-            <button type="button" class="tnode" data-tech="TypeScript">TypeScript</button>
-            <button type="button" class="tnode" data-tech="JavaScript">JavaScript</button>
-            <button type="button" class="tnode" data-tech="HTML">HTML</button>
-            <button type="button" class="tnode" data-tech="CSS">CSS</button>
-            <button type="button" class="tnode" data-tech="Tailwind">Tailwind</button>
-          </div>
-        </div>
-        <div class="const-panel glass" data-group="BACKEND" data-reveal>
-          <h3>BACKEND</h3>
-          <svg class="const-lines" aria-hidden="true"></svg>
-          <div class="tnodes">
-            <button type="button" class="tnode" data-tech="Node.js">Node.js</button>
-            <button type="button" class="tnode" data-tech="Express">Express</button>
-            <button type="button" class="tnode" data-tech="REST APIs">REST APIs</button>
-          </div>
-        </div>
-        <div class="const-panel glass" data-group="DATABASE" data-reveal>
-          <h3>DATABASE</h3>
-          <svg class="const-lines" aria-hidden="true"></svg>
-          <div class="tnodes">
-            <button type="button" class="tnode" data-tech="PostgreSQL">PostgreSQL</button>
-            <button type="button" class="tnode" data-tech="MySQL">MySQL</button>
-            <button type="button" class="tnode" data-tech="Prisma">Prisma</button>
-            <button type="button" class="tnode" data-tech="Supabase">Supabase</button>
-            <button type="button" class="tnode" data-tech="Neon">Neon</button>
-          </div>
-        </div>
-        <div class="const-panel glass" data-group="CMS" data-reveal>
-          <h3>CMS</h3>
-          <svg class="const-lines" aria-hidden="true"></svg>
-          <div class="tnodes">
-            <button type="button" class="tnode" data-tech="Sanity">Sanity</button>
-          </div>
-        </div>
-        <div class="const-panel glass" data-group="DEPLOYMENT" data-reveal>
-          <h3>DEPLOYMENT</h3>
-          <svg class="const-lines" aria-hidden="true"></svg>
-          <div class="tnodes">
-            <button type="button" class="tnode" data-tech="Vercel">Vercel</button>
-            <button type="button" class="tnode" data-tech="Git">Git</button>
-            <button type="button" class="tnode" data-tech="GitHub">GitHub</button>
-          </div>
-        </div>
-        <div class="const-panel glass" data-group="OTHER" data-reveal>
-          <h3>OTHER</h3>
-          <svg class="const-lines" aria-hidden="true"></svg>
-          <div class="tnodes">
-            <button type="button" class="tnode" data-tech="SEO">SEO</button>
-            <button type="button" class="tnode" data-tech="API Integration">API Integration</button>
-            <button type="button" class="tnode" data-tech="Automation">Automation</button>
-            <button type="button" class="tnode" data-tech="AI Integration">AI Integration</button>
-          </div>
-        </div>
+        <!--__HOME_STACK__-->
       </div>
     </div>
   </section>
@@ -499,3 +333,181 @@ export const BODY_HTML = `
 <div class="tip" id="tip" role="tooltip"></div>
 
 `;
+
+// ---------------------------------------------------------------------------
+// CMS-driven regions
+// ---------------------------------------------------------------------------
+
+/**
+ * Every value here originates in MongoDB and is injected through
+ * `dangerouslySetInnerHTML`, so it is escaped before it reaches the document.
+ * `&` goes first, otherwise the ampersands introduced by the later rules
+ * would be escaped twice.
+ */
+const esc = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+/** Only http(s) and root-relative hrefs are allowed through, so a CMS field can never inject `javascript:`. */
+const safeHref = (value: string) =>
+  /^(https?:\/\/|\/(?!\/)|#|mailto:)/i.test(value) ? esc(value) : '';
+
+/** Hostname without `www.` for the fake browser chrome in the project preview. */
+const hostLabel = (liveUrl: string) => {
+  const match = liveUrl.match(/^https?:\/\/(?:www\.)?([^/?#]+)/i);
+  return match ? match[1] : '';
+};
+
+const pad2 = (index: number) => String(index + 1).padStart(2, '0');
+
+const EMPTY_ARTICLE = '<p class="lede" data-reveal>Nothing published here yet — add content in the admin panel.</p>';
+
+/**
+ * Decorative browser-window mock for a project card.
+ *
+ * The three `visual` variants are the original hand-drawn previews; `default`
+ * reuses the watch-card layout that `app/projects/page.tsx` already ships, so a
+ * project added in the CMS without picking a variant still looks intentional.
+ */
+const renderPreview = (project: HomeProject) => {
+  const label = esc(project.title);
+  const url = esc(hostLabel(project.liveUrl));
+
+  const chrome = `<div class="pv-chrome"><i></i><i></i><i></i><span class="url">${url}</span>
+              <div class="pv-badges"><span class="b-live">LIVE</span><span>CASE STUDY</span><span>SOURCE</span></div>
+            </div>`;
+
+  const bodies: Record<string, string> = {
+    swiftza: `<div class="pv-hero"><span class="wm">${label}</span><span class="sk tl"></span></div>
+              <div class="pv-watch">
+                <div class="pv-card"><span class="face"></span><span class="lines"><span class="sk"></span><span class="sk dim"></span></span><span class="price"></span></div>
+                <div class="pv-card"><span class="face"></span><span class="lines"><span class="sk"></span><span class="sk dim"></span></span><span class="price"></span></div>
+              </div>`,
+    zirconia: `<div class="side"><span class="sk" style="width:70%"></span><span class="sk dim"></span><span class="sk dim"></span><span class="sk dim"></span><span class="sk dim"></span></div>
+              <div class="cat">
+                <div class="zc"><i></i></div><div class="zc"><i></i></div>
+                <div class="zc"><i></i></div><div class="zc"><i></i></div>
+              </div>`,
+    ev: `<div class="stage"><span class="beam"></span><span class="car"></span></div>
+              <div class="pv-specs">
+                <div class="row"><span class="lb">RANGE</span><span class="bar" style="--w:78%"></span></div>
+                <div class="row"><span class="lb">CHARGE</span><span class="bar" style="--w:56%"></span></div>
+                <div class="row"><span class="lb">MOTOR</span><span class="bar" style="--w:66%"></span></div>
+                <div class="row"><span class="lb">CONNECT</span><span class="bar" style="--w:44%"></span></div>
+              </div>`,
+    default: `<div class="pv-hero"><span class="wm">${label}</span><span class="sk tl"></span></div>
+              <div class="pv-watch">
+                <div class="pv-card"><span class="face"></span><span class="lines"><span class="sk"></span><span class="sk dim"></span></span><span class="price"></span></div>
+                <div class="pv-card"><span class="face"></span><span class="lines"><span class="sk"></span><span class="sk dim"></span></span><span class="price"></span></div>
+              </div>`,
+  };
+
+  return `<div class="pv pv-${project.visual}" role="img" aria-label="${label} interface preview">
+            ${chrome}
+            <div class="pv-body">
+              ${bodies[project.visual]}
+            </div>
+          </div>`;
+};
+
+/** One `<article class="project">` per published project, in the editor's `order`. */
+const renderProjects = (projects: HomeProject[]) => {
+  if (projects.length === 0) return EMPTY_ARTICLE;
+
+  return projects
+    .map((project, index) => {
+      const liveHref = safeHref(project.liveUrl);
+      const caseStudyHref = safeHref(project.caseStudyUrl);
+
+      const actions = [
+        liveHref
+          ? `<a class="btn btn-primary btn-sm magnetic" href="${liveHref}" target="_blank" rel="noopener" aria-label="View ${esc(project.title)} project">View Project <span class="arr">→</span></a>`
+          : '',
+        caseStudyHref
+          ? `<a class="btn btn-ghost btn-sm magnetic" href="${caseStudyHref}" aria-label="Open ${esc(project.title)} case study">Case Study <span class="arr">↗</span></a>`
+          : '',
+      ].join('');
+
+      const chips = project.tags
+        .map((tag) => `<span class="chip">${esc(tag)}</span>`)
+        .join('');
+
+      return `<article class="project glass" data-reveal data-project>
+        <span class="p-index" aria-hidden="true">${pad2(index)}</span>
+        <div class="p-visual">
+          ${renderPreview(project)}
+        </div>
+        <div class="p-info">
+          <span class="cat">${esc(project.category)}</span>
+          <h3>${esc(project.title)}</h3>
+          <p>${esc(project.description)}</p>
+          <div class="p-actions">
+            ${actions}
+          </div>
+          <div class="chips p-tech">
+            ${chips}
+          </div>
+        </div>
+      </article>`;
+    })
+    .join('\n');
+};
+
+/** One `<div class="tl-item">` per timeline entry, in the editor's `order`. */
+const renderExperience = (entries: HomeExperience[]) => {
+  if (entries.length === 0) return EMPTY_ARTICLE;
+
+  return entries
+    .map(
+      (entry) => `<div class="tl-item" data-reveal>
+          <span class="tl-dot" aria-hidden="true"></span>
+          <p class="tl-year">${esc(entry.year)}</p>
+          <h3 class="tl-role">${esc(entry.title)}</h3>
+          <p class="tl-desc">${esc(entry.description)}</p>
+          <div class="chips">${entry.tags.map((tag) => `<span class="chip">${esc(tag)}</span>`).join('')}</div>
+        </div>`,
+    )
+    .join('\n');
+};
+
+/**
+ * One `<div class="const-panel">` per category with a `.tnode` per technology.
+ * The hover/connection graph in SiteInteractions queries `[data-tech]` inside
+ * `[data-group]`, so the category has to stay on the panel and the technology
+ * name on the button for the constellation to light up.
+ */
+const renderStack = (groups: HomeStackGroup[]) => {
+  if (groups.length === 0) return EMPTY_ARTICLE;
+
+  return groups
+    .map(
+      (group) => `<div class="const-panel glass" data-group="${esc(group.category)}" data-reveal>
+          <h3>${esc(group.category)}</h3>
+          <svg class="const-lines" aria-hidden="true"></svg>
+          <div class="tnodes">
+            ${group.items
+              .map((item) => `<button type="button" class="tnode" data-tech="${esc(item)}">${esc(item)}</button>`)
+              .join('\n            ')}
+          </div>
+        </div>`,
+    )
+    .join('\n');
+};
+
+/**
+ * `BODY_HTML` with the three CMS-driven regions filled in.
+ *
+ * The `<!--__HOME_*__-->` placeholders each occur exactly once, so `replace`
+ * swaps them without needing a global regex. Anything the loader could not
+ * produce still renders a readable empty state rather than a blank section.
+ */
+export function buildBodyHtml(home: HomeContent): string {
+  return BODY_HTML.replace('<!--__HOME_PROJECTS__-->', renderProjects(home.projects))
+    .replace('<!--__HOME_EXPERIENCE__-->', renderExperience(home.experience))
+    .replace('<!--__HOME_STACK__-->', renderStack(home.stack));
+}
+
