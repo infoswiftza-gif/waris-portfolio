@@ -25,6 +25,9 @@ import type { BlogPostRow } from '@/lib/cms/types';
  */
 export const dynamicParams = true;
 
+/** On-demand renders are cached, so a cold database costs one request, not one per visit. */
+export const revalidate = 300;
+
 /** Every query here is scoped to published posts so drafts stay private. */
 async function findPublishedPost(slug: string): Promise<BlogPostRow | null> {
   const db = await cmsDb();
@@ -33,13 +36,31 @@ async function findPublishedPost(slug: string): Promise<BlogPostRow | null> {
     .first()) ?? null) as BlogPostRow | null;
 }
 
+/**
+ * Prerendering is a build-time optimisation, never a correctness requirement:
+ * `dynamicParams = true` above means every slug renders on demand (and is then
+ * cached by `revalidate`) even when it is not in the list returned here.
+ *
+ * So a database that is briefly unreachable from the build machine — a cold
+ * Atlas free-tier cluster waking up, a network blip — must not fail the whole
+ * deploy. Returning no params degrades the build to fully dynamic rendering,
+ * which is slower on first hit but otherwise identical for readers and crawlers.
+ */
 export async function generateStaticParams() {
-  const db = await cmsDb();
-  const posts = (await db.orm.blog_posts
-    .where({ published: true })
-    .limit(999)
-    .all()) as BlogPostRow[];
-  return posts.map((post) => ({ slug: String(post.slug ?? '') }));
+  try {
+    const db = await cmsDb();
+    const posts = (await db.orm.blog_posts
+      .where({ published: true })
+      .limit(999)
+      .all()) as BlogPostRow[];
+    return posts.map((post) => ({ slug: String(post.slug ?? '') }));
+  } catch (err) {
+    console.warn(
+      '[blog] generateStaticParams: database unavailable, prerendering skipped —',
+      err instanceof Error ? err.message : err
+    );
+    return [];
+  }
 }
 
 export async function generateMetadata({
