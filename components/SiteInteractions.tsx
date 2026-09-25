@@ -26,99 +26,119 @@ export default function SiteInteractions() {
   useEffect(() => {
     let cancelled = false;
 
+    /* ============================================================
+       SHARED STATE
+       ============================================================ */
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarsePointer = matchMedia('(hover: none), (pointer: coarse)').matches;
 
-/* ============================================================
-   SHARED STATE
-   ============================================================ */
-const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const coarsePointer = matchMedia('(hover: none), (pointer: coarse)').matches;
-const startW = innerWidth;
+    let lenisEl = null;
+    let scrollP = 0, smoothP = 0;
+    let activeLandmark = 0;
+    let FW = null;
 
-let scrollP = 0, smoothP = 0;
-let activeLandmark = 0;
+    const ACCENTS = [0x64f5b0, 0x62dcff, 0x4d8dff, 0x27d889, 0xffd27a, 0x8ea8ff, 0x64f5b0];
+    const LANDMARKS = [
+      { name: 'THE CORE',            pos: [0, 0, 0],      h: 34 },
+      { name: 'FRONTEND DISTRICT',   pos: [-26, 0, -30],  h: 26 },
+      { name: 'BACKEND TOWER',       pos: [24, 0, -62],   h: 30 },
+      { name: 'DATA VAULT',          pos: [-24, 0, -96],  h: 22 },
+      { name: 'PROJECT DISTRICT',    pos: [26, 0, -130],  h: 19 },
+      { name: 'CLOUD GRID',          pos: [-20, 0, -164], h: 25 },
+      { name: 'CONTACT TERMINAL',    pos: [0, 0, -200],   h: 29 },
+    ];
+    const CAM_KEYS = [
+      // ---- whole-city TOUR: follows the road network (avenue + side streets + cross
+      // roads) so the camera flies past every district instead of only down the avenue
+      { p: 0.000, pos: [0, 8.5, 16],    look: [0, 11, -26] },     // 1  avenue entry
+      { p: 0.070, pos: [0, 10, -40],    look: [0, 12, -58] },     // 2  down the avenue — THE CORE ahead
+      { p: 0.140, pos: [0, 10.5, -72],  look: [14, 12, -72] },    // 3  first cross road, ease east
+      { p: 0.220, pos: [30, 11, -70],   look: [30, 12, -86] },    // 4  BACKEND TOWER district (+24,-62)
+      { p: 0.280, pos: [34, 11.5, -72], look: [36, 12, -96] },    // 5  corner, south on the right side street
+      { p: 0.420, pos: [34, 11.5, -96], look: [22, 12, -98] },    // 6  at the DATA VAULT cross road
+      { p: 0.520, pos: [-8, 12, -98],   look: [-22, 12, -98] },   // 7  west ride — DATA VAULT (-24,-96)
+      { p: 0.600, pos: [-34, 12, -100], look: [-36, 12, -122] },  // 8  corner, south on the left side street
+      { p: 0.720, pos: [-34, 12, -124], look: [-20, 12, -126] },  // 9  at the PROJECT cross road
+      { p: 0.820, pos: [4, 12, -124],   look: [24, 12, -132] },   // 10 east ride on the z=-124 road
+      { p: 0.880, pos: [34, 12, -126],  look: [33, 13, -150] },   // 11 PROJECT DISTRICT (+26,-130), then south
+      { p: 0.950, pos: [34, 12, -196],  look: [18, 13, -202] },   // 12 south on the right side street
+      { p: 0.975, pos: [34, 12, -202],  look: [12, 14, -192] },   // 13 at the last cross road, gaze at the terminal
+      { p: 1.000, pos: [0, 12, -212],   look: [0, 16, -184] },    // 14 finale — pull back, CONTACT TERMINAL framed
+    ];
 
-const ACCENTS = [0x64f5b0, 0x62dcff, 0x4d8dff, 0x27d889, 0xffd27a, 0x8ea8ff, 0x64f5b0];
-const LANDMARKS = [
-  { name: 'THE CORE',            pos: [0, 0, 0],      h: 34 },
-  { name: 'FRONTEND DISTRICT',   pos: [-26, 0, -30],  h: 26 },
-  { name: 'BACKEND TOWER',       pos: [24, 0, -62],   h: 30 },
-  { name: 'DATA VAULT',          pos: [-24, 0, -96],  h: 22 },
-  { name: 'PROJECT DISTRICT',    pos: [26, 0, -130],  h: 19 },
-  { name: 'CLOUD GRID',          pos: [-20, 0, -164], h: 25 },
-  { name: 'CONTACT TERMINAL',    pos: [0, 0, -200],   h: 29 },
-];
-const CAM_KEYS = [
-    // ---- whole-city TOUR: follows the road network (avenue + side streets + cross
-    // roads) so the camera flies past every district instead of only down the avenue
-    { p: 0.000, pos: [0, 8.5, 16],    look: [0, 11, -26] },     // 1  avenue entry
-    { p: 0.070, pos: [0, 10, -40],    look: [0, 12, -58] },     // 2  down the avenue — THE CORE ahead
-    { p: 0.140, pos: [0, 10.5, -72],  look: [14, 12, -72] },    // 3  first cross road, ease east
-    { p: 0.220, pos: [30, 11, -70],   look: [30, 12, -86] },    // 4  BACKEND TOWER district (+24,-62)
-    { p: 0.280, pos: [34, 11.5, -72], look: [36, 12, -96] },    // 5  corner, south on the right side street
-    { p: 0.420, pos: [34, 11.5, -96], look: [22, 12, -98] },    // 6  at the DATA VAULT cross road
-    { p: 0.520, pos: [-8, 12, -98],   look: [-22, 12, -98] },   // 7  west ride — DATA VAULT (-24,-96)
-    { p: 0.600, pos: [-34, 12, -100], look: [-36, 12, -122] },  // 8  corner, south on the left side street
-    { p: 0.720, pos: [-34, 12, -124], look: [-20, 12, -126] },  // 9  at the PROJECT cross road
-    { p: 0.820, pos: [4, 12, -124],   look: [24, 12, -132] },   // 10 east ride on the z=-124 road
-    { p: 0.880, pos: [34, 12, -126],  look: [33, 13, -150] },   // 11 PROJECT DISTRICT (+26,-130), then south
-    { p: 0.950, pos: [34, 12, -196],  look: [18, 13, -202] },   // 12 south on the right side street
-    { p: 0.975, pos: [34, 12, -202],  look: [12, 14, -192] },   // 13 at the last cross road, gaze at the terminal
-    { p: 1.000, pos: [0, 12, -212],   look: [0, 16, -184] },    // 14 finale — pull back, CONTACT TERMINAL framed
-  ];
+    /* no-op city API — replaced when WebGL initializes; UI stays functional without it */
+    const city = {
+      ok: false,
+      setActive() {},
+      techGroup() {},
+      pulse() {},
+    };
 
-/* no-op city API — replaced when WebGL initializes; UI stays functional without it */
-const city = {
-  ok: false,
-  setActive() {},
-  techGroup() {},
-  pulse() {},
-};
-
-function tier() {
-  const w = innerWidth;
-  if (w <= 380) return 0;
-  if (w <= 720) return 1;
-  if (w <= 980) return 2;
-  if (w <= 1200) return 3;
-  return 4;
-}
-const T = {
-  buildings: [95, 125, 165, 205, 240][tier()],
-  windows:   [800, 1100, 1600, 2200, 2600][tier()],
-  particles: [260, 380, 550, 700, 820][tier()],
-  packets:   [14, 18, 24, 27, 27][tier()],
-};
-
-/* ============================================================
-   WEBGL CITY — deferred until the browser is idle so the page
-   paints (LCP/TBT) before the heavy procedural city builds
-   ============================================================ */
-const webglAvailable = () => {
-  try {
-    const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
-  } catch { return false; }
-};
-const startCity = () => {
-  if (cancelled) return;
-  if (!webglAvailable()) {
-    document.body.classList.add('no-webgl');
-    return;
-  }
-  try { initCity(); }
-  catch {
-    // high-performance/antialias request may fail on weak GPUs — retry with safe defaults
-    try { initCity({ antialias: false, powerPreference: 'default' }); }
-    catch (err) {
-      console.warn('Digital City disabled — falling back to static background.', err);
-      document.body.classList.add('no-webgl');
+    function tier() {
+      const w = innerWidth;
+      if (w <= 380) return 0;
+      if (w <= 720) return 1;
+      if (w <= 980) return 2;
+      if (w <= 1200) return 3;
+      return 4;
     }
-  }
-};
-if (typeof requestIdleCallback === 'function') requestIdleCallback(startCity, { timeout: 2000 });
-else setTimeout(startCity, 200);
+    const T = {
+      buildings: [95, 125, 165, 205, 240][tier()],
+      windows:   [800, 1100, 1600, 2200, 2600][tier()],
+      particles: [260, 380, 550, 700, 820][tier()],
+      packets:   [14, 18, 24, 27, 27][tier()],
+    };
 
-function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-performance' | 'default' } = {}) {
+    /* ============================================================
+       WEBGL CITY — starts as soon as the canvas is in the DOM.
+       (Replaces the old requestIdleCallback deferred init, which
+       delayed the city up to ~2s and sometimes left the home page
+       looking empty on slow connections.)
+       ============================================================ */
+    const webglAvailable = () => {
+      try {
+        const c = document.createElement('canvas');
+        return !!(c.getContext('webgl2') || c.getContext('webgl'));
+      } catch { return false; }
+    };
+    const startCity = () => {
+      if (cancelled) return;
+      if (!webglAvailable()) {
+        document.body.classList.add('no-webgl');
+        return;
+      }
+      try { initCity(); }
+      catch {
+        // high-performance/antialias request may fail on weak GPUs — retry with safe defaults
+        try { initCity({ antialias: false, powerPreference: 'default' }); }
+        catch (err) {
+          console.warn('Digital City disabled — falling back to static background.', err);
+          document.body.classList.add('no-webgl');
+        }
+      }
+    };
+    // The canvas is injected via dangerouslySetInnerHTML, so if it isn't in the DOM
+    // yet, poll for it instead of relying on the browser's idle queue (which can
+    // be dropped or delayed on slow connections).
+    const waitForCanvas = () => {
+      if (cancelled) return;
+      const canvas = document.querySelector('.city-canvas');
+      if (canvas) {
+        // Extra safety: only start the renderer once the canvas is actually ready
+        // (not just present in the DOM).
+        const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+        if (gl) {
+          startCity();
+        } else {
+          setTimeout(waitForCanvas, 50);
+        }
+        return;
+      }
+      setTimeout(waitForCanvas, 50);
+    };
+    waitForCanvas();
+
+    function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-performance' | 'default' } = {}) {
   const canvas = document.querySelector('.city-canvas');
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -927,7 +947,7 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
   })();
 
   /* ---------- scroll fireworks (bursts explode over the city as you scroll) ---------- */
-  const FW = !reduced ? (() => {
+  FW = !reduced ? (() => {
     const MAX = 2600;
     const pos = new Float32Array(MAX * 3), vel = new Float32Array(MAX * 3);
     const life = new Float32Array(MAX), col = new Float32Array(MAX * 3);
@@ -2484,18 +2504,20 @@ function initCity(rendererOpts: { antialias?: boolean; powerPreference?: 'high-p
 /* ============================================================
    SMOOTH SCROLL (Lenis)
    ============================================================ */
-let lenis = null;
 if (!reduced && typeof Lenis !== 'undefined') {
-  lenis = new Lenis({ duration: 1.15, smoothWheel: true, touchMultiplier: 1.5 });
+  lenisEl = new Lenis({ duration: 1.15, smoothWheel: true, touchMultiplier: 1.5 });
 }
 
 /* ============================================================
    SCROLL PROGRESS
    ============================================================ */
 function readScroll() {
-  const doc = document.documentElement;
-  const max = doc.scrollHeight - innerHeight;
-  scrollP = max > 0 ? Math.min(1, Math.max(0, (window.scrollY || 0) / max)) : 0;
+  const max = document.documentElement.scrollHeight - innerHeight;
+  // When Lenis is active, visual scroll position comes from lenisEl.scroll;
+  // reading window.scrollY here would silently desync the HUD, dawn and
+  // camera from the actual scrolled position.
+  const y = lenisEl !== null ? lenisEl.scroll : window.scrollY;
+  scrollP = max > 0 ? Math.min(1, Math.max(0, (y / max))) : 0;
 }
 addEventListener('scroll', readScroll, { passive: true });
 addEventListener('resize', readScroll, { passive: true });
@@ -2516,6 +2538,10 @@ if (reduced) {
     el.style.transitionDelay = `${Math.min(n * 80, 420)}ms`;
     groups.set(sec, n + 1);
   });
+  // content must be visible on load — add .in immediately; the IntersectionObserver
+  // below only adds a subtle in-view scroll enhancement on top, so nothing is
+  // hidden until the user scrolls.
+  revealEls.forEach((el) => el.classList.add('in'));
   const io = new IntersectionObserver(entries => {
     for (const en of entries) {
       if (en.isIntersecting) {
@@ -2580,7 +2606,7 @@ function setMenu(open) {
   document.body.style.overflow = open ? 'hidden' : '';
 }
 menuBtn.addEventListener('click', () => setMenu(menuBtn.getAttribute('aria-expanded') !== 'true'));
-mnav.addEventListener('click', e => { if (e.target.closest('a')) setMenu(false); });
+mnav.addEventListener('click', () => setMenu(false));
 addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false); });
 
 // smooth anchor scrolling (Lenis-aware)
@@ -2592,7 +2618,7 @@ document.addEventListener('click', e => {
   const target = document.querySelector(id);
   if (!target) return;
   e.preventDefault();
-  if (lenis) lenis.scrollTo(target, { offset: -70, duration: 1.4 });
+  if (lenisEl) lenisEl.scrollTo(target, { offset: -70, duration: 1.4 });
   else target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
 });
 
@@ -2807,7 +2833,7 @@ function loop(now) {
   last = now;
   if (document.hidden) return;
 
-  if (lenis) lenis.raf(now);
+  if (lenisEl) lenisEl.raf(now);
 
   smoothP += (scrollP - smoothP) * Math.min(1, dt * 3.4);
   if (Math.abs(scrollP - smoothP) < 0.0004) smoothP = scrollP;

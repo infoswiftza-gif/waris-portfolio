@@ -46,6 +46,15 @@ export default function SiteNav() {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, [open]);
+
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
@@ -81,7 +90,7 @@ export default function SiteNav() {
           </button>
         </div>
       </header>
-      <div className={`mnav${open ? ' open' : ''}`} id="mnav" aria-hidden={!open}>
+      <div className={`mnav${open ? ' open' : ''}`} id="mnav" aria-hidden={!open} onClick={() => setOpen(false)}>
         {MOBILE.map((l) => (
           <Link key={l.href} href={l.href} onClick={() => setOpen(false)}>
             <i>{l.n}</i>
