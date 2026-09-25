@@ -21,6 +21,15 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/orm-mongo', 'mongodb', 'bcryptjs'],
   },
+  // prisma/db.ts reads prisma/contract.json via fs.readFileSync with a path computed
+  // from __dirname/import.meta.url at module-load time. Next's file tracer (nft) only
+  // reliably detects *literal* fs.readFileSync("...") paths, not computed ones, so this
+  // file was intermittently missing from a given route's serverless function bundle —
+  // causing an ENOENT on import and an immediate 500, only on the routes/instances where
+  // it wasn't traced. Force-including it here guarantees every route ships it.
+  outputFileTracingIncludes: {
+    '/**': ['./prisma/contract.json'],
+  },
 };
 
 export default nextConfig;
