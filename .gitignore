@@ -6,3 +6,6 @@ out
 *.tsbuildinfo
 lh-perf.json
 .DS_Store
+.env
+.env.*
+!.env.example

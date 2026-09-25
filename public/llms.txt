@@ -29,4 +29,4 @@ All content below is available as plain HTML at the linked URLs.
 
 - Name: Waris Ali
 - Role: Full Stack Developer
-- Contact: hello@waris.dev
+- Contact: waris0543@gmail.com

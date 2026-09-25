@@ -12,12 +12,14 @@
     "lenis": "^1.1.14",
     "motion": "^13.4.3",
     "next": "14.2.35",
+    "nodemailer": "^10.0.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "0.160.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/three": "0.160.0",

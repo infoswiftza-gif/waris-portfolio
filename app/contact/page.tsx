@@ -4,12 +4,15 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
 import PageHead from '@/components/PageHead';
+import ContactForm from '@/components/ContactForm';
 
 export const metadata: Metadata = {
   title: 'Contact — Waris Ali · Contact Terminal · WARIS.DEV',
   description:
     'Get in touch with Waris Ali — available for select projects, remote-friendly, and open to building something worth shipping.',
 };
+
+const EMAIL = 'waris0543@gmail.com';
 
 export default function ContactPage() {
   return (
@@ -34,7 +37,7 @@ export default function ContactPage() {
                   <span className="dot" aria-hidden="true"></span>AVAILABLE FOR SELECT PROJECTS
                 </p>
                 <div className="hero-actions" style={{ marginTop: 34 }} data-reveal>
-                  <a className="btn btn-primary magnetic" href="mailto:hello@waris.dev">
+                  <a className="btn btn-primary magnetic" href={`mailto:${EMAIL}`}>
                     Start a Conversation <span className="arr">→</span>
                   </a>
                   <a className="btn btn-ghost magnetic" href="https://github.com/" target="_blank" rel="noopener">
@@ -76,12 +79,12 @@ export default function ContactPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 18, marginTop: 52 }}>
-              <a className="glass link-card" data-reveal href="mailto:hello@waris.dev" rel="noopener" style={{ padding: '28px 26px', display: 'block' }}>
+              <a className="glass link-card" data-reveal href={`mailto:${EMAIL}`} rel="noopener" style={{ padding: '28px 26px', display: 'block' }}>
                 <p className="foot-h" style={{ marginBottom: 8 }}>
                   EMAIL
                 </p>
                 <p style={{ fontFamily: 'var(--display)', fontSize: 'clamp(17px,2.4vw,22px)', fontWeight: 600 }}>
-                  hello@waris.dev <span className="arr" style={{ color: 'var(--accent)' }}>→</span>
+                  {EMAIL} <span className="arr" style={{ color: 'var(--accent)' }}>→</span>
                 </p>
                 <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 6 }}>The fastest way to start a conversation.</p>
               </a>
@@ -103,6 +106,25 @@ export default function ContactPage() {
                 </p>
                 <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 6 }}>Resume, recommendations, and updates.</p>
               </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ============== SEND A MESSAGE ============== */}
+        <section className="section" id="message">
+          <div className="wrap">
+            <div className="section-head">
+              <p className="eyebrow" data-reveal>
+                <b>03</b> / SEND A MESSAGE
+              </p>
+              <h2 data-reveal>Drop me a direct line.</h2>
+              <p className="lede" data-reveal>
+                Fill this in and it lands in my inbox — plus a confirmation copy is sent to yours.
+              </p>
+            </div>
+
+            <div style={{ maxWidth: 760, marginTop: 40 }}>
+              <ContactForm />
             </div>
           </div>
         </section>

@@ -85,7 +85,7 @@ const JSON_LD = {
       name: "Waris Ali",
       url: SITE_URL,
       jobTitle: "Full Stack Developer",
-      email: "mailto:hello@waris.dev",
+      email: "mailto:waris0543@gmail.com",
       description:
         "Full Stack Developer building fast, scalable, and visually refined digital experiences from frontend to backend.",
       knowsAbout: [

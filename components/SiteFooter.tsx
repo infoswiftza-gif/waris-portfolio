@@ -25,6 +25,7 @@ export default function SiteFooter() {
             <Link href="/stack">STACK</Link>
             <Link href="/projects">PROJECTS</Link>
             <Link href="/experience">EXPERIENCE</Link>
+            <Link href="/blog">BLOG</Link>
             <Link href="/contact">CONTACT</Link>
           </div>
         </nav>
@@ -37,7 +38,7 @@ export default function SiteFooter() {
             <a href="https://www.linkedin.com/" target="_blank" rel="noopener">
               LinkedIn
             </a>
-            <a href="mailto:hello@waris.dev" rel="noopener">
+            <a href="mailto:waris0543@gmail.com" rel="noopener">
               Email
             </a>
           </div>

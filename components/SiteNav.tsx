@@ -12,6 +12,7 @@ const PRIMARY = [
   { href: '/stack', label: 'STACK' },
   { href: '/projects', label: 'PROJECTS' },
   { href: '/experience', label: 'EXPERIENCE' },
+  { href: '/blog', label: 'BLOG' },
 ];
 
 const MOBILE = [
@@ -21,6 +22,7 @@ const MOBILE = [
   { href: '/experience', n: '04', label: 'EXPERIENCE' },
   { href: '/process', n: '05', label: 'PROCESS' },
   { href: '/contact', n: '06', label: 'CONTACT' },
+  { href: '/blog', n: '07', label: 'JOURNAL' },
 ];
 
 export default function SiteNav() {

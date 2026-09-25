@@ -27,6 +27,7 @@ export const BODY_HTML = `
       <a href="/stack">STACK</a>
       <a href="/projects">PROJECTS</a>
       <a href="/experience">EXPERIENCE</a>
+      <a href="/blog">BLOG</a>
     </nav>
     <a class="btn btn-ghost btn-sm nav-cta magnetic" href="/contact">LET'S BUILD</a>
     <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="mnav" aria-label="Open menu">
@@ -43,6 +44,7 @@ export const BODY_HTML = `
   <a href="/experience"><i>04</i>EXPERIENCE</a>
   <a href="/process"><i>05</i>PROCESS</a>
   <a href="/contact"><i>06</i>CONTACT</a>
+  <a href="/blog"><i>07</i>JOURNAL</a>
 </div>
 
 <main id="top">
@@ -438,7 +440,7 @@ export const BODY_HTML = `
           <h2 data-reveal>Have Something Worth Building?</h2>
           <p class="lede" data-reveal>Let's turn the idea into a real digital product.</p>
           <div class="hero-actions" style="margin-top:34px" data-reveal>
-            <a class="btn btn-primary magnetic" href="mailto:hello@waris.dev">Start a Conversation <span class="arr">→</span></a>
+            <a class="btn btn-primary magnetic" href="mailto:waris0543@gmail.com">Start a Conversation <span class="arr">→</span></a>
             <a class="btn btn-ghost magnetic" href="https://github.com/" target="_blank" rel="noopener">View GitHub <span class="arr">↗</span></a>
           </div>
           <ul class="c-status" data-reveal>
@@ -475,6 +477,7 @@ export const BODY_HTML = `
         <a href="/stack">STACK</a>
         <a href="/projects">PROJECTS</a>
         <a href="/experience">EXPERIENCE</a>
+        <a href="/blog">BLOG</a>
         <a href="/contact">CONTACT</a>
       </div>
     </nav>
@@ -483,7 +486,7 @@ export const BODY_HTML = `
       <div class="foot-links">
         <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
         <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
-        <a href="mailto:hello@waris.dev" rel="noopener">Email</a>
+        <a href="mailto:waris0543@gmail.com" rel="noopener">Email</a>
       </div>
     </div>
   </div>
