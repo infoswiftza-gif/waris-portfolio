@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
 export const runtime = 'nodejs';
+export const maxDuration = 30;
 
 const TO = process.env.CONTACT_TO?.trim();
 const SMTP = {
@@ -89,31 +90,31 @@ export async function POST(req: Request) {
   });
 
   try {
-    await Promise.all([
-      transporter.sendMail({
-        from,
-        to: TO,
-        replyTo: email,
-        subject: `New message from ${name} — waris.dev contact`,
-        text: [
-          `Name:      ${name}`,
-          company && `Company:   ${company}`,
-          `Email:     ${email}`,
-          `Sent at:   ${sentAt}`,
-          `IP:        ${ip || 'n/a'}`,
-          '',
-          '— Message —',
-          message,
-          '',
-          '—',
-          'Reply directly to this email to respond to the sender.',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-        headers: { 'X-Contact-IP': ip || 'n/a' },
-      }),
+    await transporter.sendMail({
+      from,
+      to: TO,
+      replyTo: email,
+      subject: `New message from ${name} — waris.dev contact`,
+      text: [
+        `Name:      ${name}`,
+        company && `Company:   ${company}`,
+        `Email:     ${email}`,
+        `Sent at:   ${sentAt}`,
+        `IP:        ${ip || 'n/a'}`,
+        '',
+        '— Message —',
+        message,
+        '',
+        '—',
+        'Reply directly to this email to respond to the sender.',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      headers: { 'X-Contact-IP': ip || 'n/a' },
+    });
 
-      transporter.sendMail({
+    try {
+      await transporter.sendMail({
         from,
         to: email,
         subject: 'Thanks for reaching out — Waris.dev',
@@ -129,8 +130,10 @@ If it's urgent, you can always reply to the welcome email I just sent myself —
 
 — Waris
 https://waris.dev`,
-      }),
-    ]);
+      });
+    } catch (err) {
+      console.error('[contact] auto-reply failed:', err);
+    }
   } catch (err) {
     console.error('[contact] mail failed:', err);
     lastSent.delete(key);
