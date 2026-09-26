@@ -1,23 +1,23 @@
 import 'dotenv/config';
-import dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
 
 import mongo from '@prisma/orm-mongo/runtime';
 import { MongoClient } from 'mongodb';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 import type { Contract } from './contract.d';
 
-// Load the compiled contract. The `with { type: 'json' }` import syntax is not
-// resolvable by Next.js/webpack at build time, so we read the file at runtime
-// with fs and parse it.
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const contractJsonRaw = fs.readFileSync(
-  path.resolve(__dirname, 'contract.json'),
-  'utf8'
-);
-const contractJson = JSON.parse(contractJsonRaw);
+// The compiled contract is imported statically so webpack inlines it into every
+// server bundle, so no serverless function has to resolve a file at request
+// time.
+//
+// It used to be read at module-load time with
+//   fs.readFileSync(path.resolve(__dirname, 'contract.json'))
+// where __dirname came from fileURLToPath(import.meta.url). Webpack rewrites that
+// to an absolute path on the build machine (/vercel/path0 on Vercel). That path
+// exists while `next build` runs, so the build reported success, but not
+// inside a deployed function -- so the read threw ENOENT while the module was
+// being imported and every route that touches the database returned 500. Routes
+// that never import this module (/robots.txt, /about, /contact) kept working,
+// which is what made it look like a partial outage instead of a build problem.
+import contractJson from './contract.json';
 
 const databaseUrl = process.env.DATABASE_URL ?? '';
 
