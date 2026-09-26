@@ -94,19 +94,32 @@ export async function cmsDb() {
 
   /**
    * `connect()` throws `DRIVER.ALREADY_CONNECTED` when the driver is already
-   * bound, so it is invoked at most once per process and the resulting
+   * bound, so it is invoked at most once per module instance and the resulting
    * promise is reused. Call this inside every route/page so Prisma 8
    * connects once and reuses the runtime for the whole request.
+   *
+   * `connectPromise` is module scoped, but `cmsSingleton` may have been
+   * adopted from `globalThis` -- in development every route bundle is a
+   * separate module instance sharing one process, so the *first* route to
+   * call `cmsDb()` connects and the next bundle inherits the connected
+   * instance and tries to connect a second time. That is not a failure, it is
+   * the sharing working, so ALREADY_CONNECTED is swallowed instead of
+   * surfacing as a 500 on every API route.
    */
   if (!connectPromise) {
-    connectPromise = cms.connect({ mongoClient: activeMongoClient, dbName });
+    connectPromise = cms.connect({ mongoClient: activeMongoClient, dbName }).catch((err: unknown) => {
+      const code = (err as { code?: string } | null)?.code;
+      const message = (err as { message?: string } | null)?.message ?? '';
+      if (code === 'DRIVER.ALREADY_CONNECTED' || message.includes('DRIVER.ALREADY_CONNECTED')) {
+        return undefined;
+      }
+      // A genuine connection failure has to stay visible to the caller, and
+      // the next call gets a fresh attempt rather than this rejected promise.
+      connectPromise = null;
+      throw err;
+    });
   }
-  try {
-    await connectPromise;
-  } catch (err) {
-    connectPromise = null;
-    throw err;
-  }
+  await connectPromise;
   return cms;
 }
 

@@ -8,14 +8,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "contract:emit": "prisma contract emit",
+    "contract:emit": "prisma contract emit && node scripts/contract-postemit.mjs",
+    "test:cms": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/cms-e2e.ps1",
+    "test:media": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/media-e2e.ps1",
     "seed:home": "node scripts/seed-home-content.mjs",
     "seed:home:reset": "node scripts/seed-home-content.mjs --reset"
   },
   "dependencies": {
     "@prisma/client": "^7.10.0",
     "@prisma/orm-mongo": "^8.0.0-rc.12",
-    "@vercel/blob": "^2.8.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.3",
     "lenis": "^1.1.14",
@@ -27,7 +28,8 @@
     "prisma": "^8.0.0-rc.17",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "three": "0.160.0"
+    "three": "0.160.0",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import Script from 'next/script';
@@ -11,6 +12,7 @@ import PostToc from '@/components/PostToc';
 import CodeBlock from '@/components/CodeBlock';
 import ShareBar from '@/components/ShareBar';
 import { cmsDb } from '@/prisma/db';
+import { cloudinaryTransform } from '@/lib/cloudinary';
 import { headingId, type PostBlock } from '@/lib/posts';
 import { markdownToBlocks, parseInline, type InlineToken } from '@/lib/cms/markdown';
 import type { BlogPostRow } from '@/lib/cms/types';
@@ -94,6 +96,9 @@ export async function generateMetadata({
       type: 'article',
       publishedTime: post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
       tags: post.tags,
+      images: post.coverImage
+        ? [cloudinaryTransform(post.coverImage, { width: 1200, height: 630 })]
+        : undefined,
     },
   };
 }
@@ -226,6 +231,29 @@ export default async function BlogPostPage({
             <h1 style={{ fontSize: 'clamp(34px,5vw,58px)' }}>{post.title}</h1>
             <p className="lede">{post.excerpt}</p>
           </div>
+
+          {post.coverImage && (
+            <div
+              className="glass"
+              data-reveal
+              style={{
+                margin: '0 0 40px',
+                padding: 10,
+                borderRadius: '18px',
+                overflow: 'hidden',
+              }}
+            >
+              <Image
+                src={cloudinaryTransform(post.coverImage, { width: 1600, height: 900 })}
+                alt={post.title || 'Post cover'}
+                width={1600}
+                height={900}
+                sizes="(max-width: 900px) 100vw, 1100px"
+                style={{ width: '100%', height: 'auto', borderRadius: '12px', display: 'block' }}
+                priority
+              />
+            </div>
+          )}
 
           <div
             className="post-meta"

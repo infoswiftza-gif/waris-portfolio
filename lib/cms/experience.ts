@@ -1,13 +1,14 @@
-import type { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { guardAdmin } from '@/lib/admin';
-import { cmsDb } from '@/prisma/db';
-import { invalid, isSameId, notFound, ok, readJson } from './http';
-import { revalidatePublicPaths } from './revalidate';
+
+import { createResource } from './factory';
+import { type ResourceDef, req } from './registry';
 
 /**
- * Experience CRUD, exposed as `/api/experience` and `/api/experience/[id]`.
- * Collection is `db.orm.experience` (the contract root name).
+ * Experience resource.
+ *
+ * Collection is `db.orm.experience` — the contract root is already singular.
+ * Timeline entries are always public, so there is no `published` flag and
+ * `/api/public/experience` serves the same rows as the admin list.
  */
 
 const ExperienceSchema = z.object({
@@ -18,71 +19,38 @@ const ExperienceSchema = z.object({
   order: z.number().int().min(-1_000_000).max(1_000_000).optional(),
 });
 
-export async function handleGet() {
-  const db = await cmsDb();
-  const entries = await db.orm.experience.orderBy({ order: 1 }).limit(999).all();
-  return ok(entries);
-}
+const def: ResourceDef = {
+  key: 'experience',
+  orm: 'experience',
+  label: 'Experience entry',
+  plural: 'Experience',
+  publicPath: '/experience',
+  schema: ExperienceSchema,
+  hasPublished: false,
+  searchFields: ['title', 'description', 'tags', 'year'],
+  sortable: ['order', 'year', 'title'],
+  defaultSort: { key: 'order', dir: 1 },
+  toCreate: (input) => ({
+    year: input.year,
+    title: req(input.title),
+    description: req(input.description),
+    tags: input.tags ?? [],
+    order: input.order ?? 0,
+    createdAt: new Date(),
+  }),
+  toUpdate: (input) => {
+    const patch: Record<string, unknown> = {};
+    if (input.year !== undefined) patch.year = input.year;
+    if (input.title) patch.title = req(input.title);
+    if (input.description !== undefined) patch.description = req(input.description);
+    if (input.tags !== undefined) patch.tags = input.tags;
+    if ('order' in input) patch.order = input.order ?? 0;
+    return patch;
+  },
+  revalidateFor: () => ['/experience', '/'],
+};
 
-export async function handlePost(req: NextRequest) {
-  const { response } = await guardAdmin(req);
-  if (response) return response;
-  const db = await cmsDb();
+const experience = createResource(def);
 
-  const body = await readJson(req);
-  if (body.ok === false) return body.response;
-
-  const parsed = ExperienceSchema.safeParse(body.value);
-  if (parsed.success === false) return invalid(parsed);
-
-  const entry = await db.orm.experience.create({
-    year: parsed.data.year,
-    title: parsed.data.title.trim(),
-    description: parsed.data.description.trim(),
-    tags: parsed.data.tags,
-    order: parsed.data.order ?? 0,
-  });
-
-  revalidatePublicPaths('/experience', '/');
-  return ok(entry, 201);
-}
-
-export async function handlePut(req: NextRequest, id: string) {
-  const { response } = await guardAdmin(req);
-  if (response) return response;
-  const db = await cmsDb();
-
-  const body = await readJson(req);
-  if (body.ok === false) return body.response;
-
-  const parsed = ExperienceSchema.partial().safeParse(body.value);
-  if (parsed.success === false) return invalid(parsed);
-
-  const existing = await db.orm.experience.where({ _id: id }).first();
-  if (!isSameId(existing, id)) return notFound();
-
-  const entry = await db.orm.experience.where({ _id: id }).update({
-    ...(parsed.data.year !== undefined && { year: parsed.data.year }),
-    ...(parsed.data.title && { title: parsed.data.title.trim() }),
-    ...(parsed.data.description !== undefined && { description: parsed.data.description.trim() }),
-    ...(parsed.data.tags !== undefined && { tags: parsed.data.tags }),
-    ...('order' in parsed.data && { order: parsed.data.order ?? 0 }),
-  });
-
-  revalidatePublicPaths('/experience', '/');
-  return ok(entry);
-}
-
-export async function handleDelete(req: NextRequest, id: string) {
-  const { response } = await guardAdmin(req);
-  if (response) return response;
-  const db = await cmsDb();
-
-  const existing = await db.orm.experience.where({ _id: id }).first();
-  if (!isSameId(existing, id)) return notFound();
-
-  const entry = await db.orm.experience.where({ _id: id }).delete();
-
-  revalidatePublicPaths('/experience', '/');
-  return ok(entry);
-}
+export const experienceDef = def;
+export const { list, publicList, get, create, update, remove, bulk } = experience;

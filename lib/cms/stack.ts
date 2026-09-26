@@ -1,90 +1,50 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { guardAdmin } from '@/lib/admin';
-import { cmsDb } from '@/prisma/db';
-import { invalid, isSameId, notFound, ok, readJson } from './http';
-import { revalidatePublicPaths } from './revalidate';
+
+import { createResource } from './factory';
+import { type ResourceDef, STACK_CATEGORIES, req } from './registry';
 
 /**
- * StackItem CRUD.
+ * StackItem resource.
  *
- * Handlers live here (not in the route files) so `route.ts` can expose
- * GET/POST while `[id]/route.ts` exposes PUT/DELETE against the same logic.
- * The admin UI calls `/api/stack` for the collection and `/api/stack/{_id}`
- * for mutations on an existing row.
- *
- * Note the collection is `db.orm.stack_items` — the Prisma 8 client is keyed
- * by the contract's snake_case root name, and reads are a chainable builder
- * (`where().orderBy().limit().all()`) rather than `find({...}).all()`.
+ * Collection is `db.orm.stack_items`. Items are always public, so there is no
+ * `published` flag; `db.orm` is keyed by the contract's snake_case root name,
+ * not the model name.
  */
 
 const StackItemSchema = z.object({
-  category: z.enum(['FRONTEND', 'BACKEND', 'DATABASE', 'CMS', 'DEPLOYMENT', 'OTHER']),
+  category: z.enum(STACK_CATEGORIES),
   name: z.string().min(1).max(255),
   order: z.number().int().min(-1_000_000).max(1_000_000).optional(),
 });
 
-export async function handleGet() {
-  const db = await cmsDb();
-  const items = await db.orm.stack_items.orderBy({ order: 1 }).limit(999).all();
-  return ok(items);
-}
+const def: ResourceDef = {
+  key: 'stack',
+  orm: 'stack_items',
+  label: 'Stack item',
+  plural: 'Stack',
+  publicPath: '/stack',
+  schema: StackItemSchema,
+  hasPublished: false,
+  searchFields: ['name', 'category'],
+  sortable: ['order', 'name', 'category'],
+  defaultSort: { key: 'order', dir: 1 },
+  toCreate: (input) => ({
+    category: input.category,
+    name: req(input.name),
+    order: input.order ?? 0,
+    createdAt: new Date(),
+  }),
+  toUpdate: (input) => {
+    const patch: Record<string, unknown> = {};
+    if (input.category !== undefined) patch.category = input.category;
+    if (input.name) patch.name = req(input.name);
+    if ('order' in input) patch.order = input.order ?? 0;
+    return patch;
+  },
+  revalidateFor: () => ['/stack', '/'],
+};
 
-export async function handlePost(req: NextRequest) {
-  const { response } = await guardAdmin(req);
-  if (response) return response;
-  const db = await cmsDb();
+const stack = createResource(def);
 
-  const body = await readJson(req);
-  if (body.ok === false) return body.response;
-
-  const parsed = StackItemSchema.safeParse(body.value);
-  if (parsed.success === false) return invalid(parsed);
-
-  const item = await db.orm.stack_items.create({
-    category: parsed.data.category,
-    name: parsed.data.name.trim(),
-    order: parsed.data.order ?? 0,
-  });
-
-  revalidatePublicPaths('/stack', '/');
-  return ok(item, 201);
-}
-
-export async function handlePut(req: NextRequest, id: string) {
-  const { response } = await guardAdmin(req);
-  if (response) return response;
-  const db = await cmsDb();
-
-  const body = await readJson(req);
-  if (body.ok === false) return body.response;
-
-  const parsed = StackItemSchema.partial().safeParse(body.value);
-  if (parsed.success === false) return invalid(parsed);
-
-  const existing = await db.orm.stack_items.where({ _id: id }).first();
-  if (!isSameId(existing, id)) return notFound();
-
-  const item = await db.orm.stack_items.where({ _id: id }).update({
-    ...(parsed.data.category !== undefined && { category: parsed.data.category }),
-    ...(parsed.data.name && { name: parsed.data.name.trim() }),
-    ...('order' in parsed.data && { order: parsed.data.order ?? 0 }),
-  });
-
-  revalidatePublicPaths('/stack', '/');
-  return ok(item);
-}
-
-export async function handleDelete(req: NextRequest, id: string) {
-  const { response } = await guardAdmin(req);
-  if (response) return response;
-  const db = await cmsDb();
-
-  const existing = await db.orm.stack_items.where({ _id: id }).first();
-  if (!isSameId(existing, id)) return notFound();
-
-  const item = await db.orm.stack_items.where({ _id: id }).delete();
-
-  revalidatePublicPaths('/stack', '/');
-  return ok(item);
-}
+export const stackDef = def;
+export const { list, publicList, get, create, update, remove, bulk } = stack;

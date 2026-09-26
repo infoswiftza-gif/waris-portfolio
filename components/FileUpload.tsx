@@ -6,13 +6,16 @@ import { useRef, useState } from 'react';
  * Reusable image uploader for the admin dashboard.
  *
  * Injects a hidden file input, reads the chosen `File` as base64, and POSTs it
- * to `/api/upload`.  The Vercel Blob `put()` route stores the blob and returns
- * `{ url }`, which the parent then writes into the Project or BlogPost record.
+ * to `/api/upload`. The Vercel Blob `put()` route stores the blob and returns
+ * `{ url }`, which the caller then writes into the Project or BlogPost record.
  *
  * Props mirror a controlled `<input type="file">`:
  *  - `value`: URL of the currently picked image (or `''`).
  *  - `onChange(url)`: pushed by the component when a file is selected or the
- *    user clears the field.
+ *    user clears the field. `null` means "clear the image".
+ *
+ * The trigger used to swap colours by writing to `element.style` on hover; it is
+ * a styled `<button>` now, so the same state is reachable by keyboard.
  */
 
 type Props = {
@@ -20,9 +23,10 @@ type Props = {
   recordType: 'Project' | 'BlogPost';
   value?: string;
   onChange?: (url: string | null) => void;
+  label?: string;
 };
 
-export function FileUpload({ name, recordType, value = '', onChange }: Props) {
+export function FileUpload({ name, recordType, value = '', onChange, label = 'Choose image' }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -67,89 +71,46 @@ export function FileUpload({ name, recordType, value = '', onChange }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/svg+xml"
-        name={name}
-        style={{ display: 'none' }}
-        onChange={onFileChange}
-        disabled={busy}
-      />
-      <button
-        type="button"
-        onClick={trigger}
-        disabled={busy}
-        style={{
-          padding: '9px 14px',
-          borderRadius: 9,
-          border: '1px dashed var(--line-strong)',
-          background: 'var(--surface)',
-          color: 'var(--ink)',
-          fontFamily: 'monospace',
-          fontWeight: 500,
-          fontSize: 12.5,
-          letterSpacing: '.04em',
-          cursor: 'pointer',
-          transition: 'border-color .2s, background .2s, color .2s',
-          WebkitAppearance: 'none',
-        }}
-        onMouseEnter={(e) => {
-          if (busy) return;
-          e.currentTarget.style.borderColor = 'var(--accent)';
-          e.currentTarget.style.color = '#04140c';
-          e.currentTarget.style.background = 'var(--accent)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'var(--line-strong)';
-          e.currentTarget.style.color = 'var(--ink)';
-          e.currentTarget.style.background = 'var(--surface)';
-        }}
-      >
-        {busy ? 'Uploading…' : 'Choose image'}
-      </button>
-      {value && (
-        <button
-          type="button"
-          onClick={onClear}
-          style={{
-            padding: '9px 14px',
-            borderRadius: 9,
-            border: '1px solid var(--line-strong)',
-            background: 'var(--surface)',
-            color: 'var(--muted)',
-            fontFamily: 'monospace',
-            fontWeight: 500,
-            fontSize: 12.5,
-            letterSpacing: '.04em',
-            cursor: 'pointer',
-            transition: 'color .2s, border-color .2s',
-            WebkitAppearance: 'none',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--ink)';
-            e.currentTarget.style.borderColor = 'var(--line)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--muted)';
-            e.currentTarget.style.borderColor = 'var(--line-strong)';
-          }}
-        >
-          Change
+    <div className="adm-field">
+      <div className="adm-actions">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/svg+xml"
+          name={name}
+          className="adm-sr"
+          onChange={onFileChange}
+          disabled={busy}
+        />
+        <button type="button" className="adm-btn" onClick={trigger} disabled={busy}>
+          {busy ? 'Uploading…' : label}
         </button>
+        {value ? (
+          <button type="button" className="adm-btn adm-btn-sm" onClick={onClear}>
+            Remove
+          </button>
+        ) : null}
+        {value ? (
+          <a
+            className="adm-btn adm-btn-sm adm-btn-ghost"
+            href={value}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            View
+          </a>
+        ) : null}
+      </div>
+      {value ? (
+        <span className="adm-hint adm-td-mono">{value}</span>
+      ) : (
+        <span className="adm-hint">No image selected.</span>
       )}
-      {error && (
-        <span
-          style={{
-            color: 'var(--danger)',
-            fontSize: 12,
-            fontFamily: 'monospace',
-          }}
-        >
+      {error ? (
+        <span className="adm-err" role="alert">
           {error}
         </span>
-      )}
+      ) : null}
     </div>
   );
 }

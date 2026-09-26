@@ -1,20 +1,20 @@
 import type { NextRequest } from 'next/server';
-import { handleDelete, handlePut } from '@/lib/cms/stack';
-
-/**
- * PUT    /api/stack/[id]  — update one stack item (admin only).
- * DELETE /api/stack/[id]  — remove one stack item (admin only).
- */
+import { get, remove, update } from '@/lib/cms/stack';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type Ctx = { params: { id: string } };
 
+/** GET / PUT / DELETE a single stack item (admin only). */
+export async function GET(req: NextRequest, { params }: Ctx) {
+  return get(req, params.id);
+}
+
 export async function PUT(req: NextRequest, { params }: Ctx) {
-  return handlePut(req, params.id);
+  return update(req, params.id);
 }
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
-  return handleDelete(req, params.id);
+  return remove(req, params.id);
 }

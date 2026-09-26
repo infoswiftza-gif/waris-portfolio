@@ -10,6 +10,7 @@
 // still the original hand-written markup, so the WebGL city, the HUD landmark tour and
 // the constellation hover graph keep working against exactly the DOM they were written for.
 import type { HomeContent, HomeExperience, HomeProject, HomeStackGroup } from './cms/home';
+import { cloudinaryTransform } from './cloudinary';
 
 export const BODY_HTML = `
 
@@ -377,6 +378,17 @@ const renderPreview = (project: HomeProject) => {
   const label = esc(project.title);
   const url = esc(hostLabel(project.liveUrl));
 
+  // A real uploaded screenshot always wins over the decorative mockup — the
+  // point of the image field is to show the actual work. `autoFormat` is on
+  // because this is a raw `<img>` in a string, so there is no `next/image` in
+  // the pipeline to negotiate WebP/AVIF for us.
+  if (project.imageUrl) {
+    const src = esc(cloudinaryTransform(project.imageUrl, { width: 1200, height: 750, autoFormat: true }));
+    return `<div class="pv pv-shot" role="img" aria-label="${label} screenshot">
+              <img class="pv-shot-img" src="${src}" alt="${label}" loading="lazy" decoding="async" width="1200" height="750" />
+            </div>`;
+  }
+
   const chrome = `<div class="pv-chrome"><i></i><i></i><i></i><span class="url">${url}</span>
               <div class="pv-badges"><span class="b-live">LIVE</span><span>CASE STUDY</span><span>SOURCE</span></div>
             </div>`;
@@ -421,14 +433,16 @@ const renderProjects = (projects: HomeProject[]) => {
   return projects
     .map((project, index) => {
       const liveHref = safeHref(project.liveUrl);
+      // `caseStudyUrl` is already resolved by `lib/cms/home.ts`, so a project
+      // with no explicit link still points at its generated `/projects/<slug>`.
       const caseStudyHref = safeHref(project.caseStudyUrl);
 
       const actions = [
         liveHref
-          ? `<a class="btn btn-primary btn-sm magnetic" href="${liveHref}" target="_blank" rel="noopener" aria-label="View ${esc(project.title)} project">View Project <span class="arr">→</span></a>`
+          ? `<a class="btn btn-primary btn-sm magnetic" href="${liveHref}" target="_blank" rel="noopener" aria-label="View ${esc(project.title)} project">View Project <span class="arr">�+'</span></a>`
           : '',
         caseStudyHref
-          ? `<a class="btn btn-ghost btn-sm magnetic" href="${caseStudyHref}" aria-label="Open ${esc(project.title)} case study">Case Study <span class="arr">↗</span></a>`
+          ? `<a class="btn btn-ghost btn-sm magnetic" href="${caseStudyHref}" aria-label="Open ${esc(project.title)} case study">Case Study <span class="arr">�+-</span></a>`
           : '',
       ].join('');
 

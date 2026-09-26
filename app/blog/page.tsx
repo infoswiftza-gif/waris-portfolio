@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
 import PageHead from '@/components/PageHead';
 import { cmsDb } from '@/prisma/db';
+import { cloudinaryTransform } from '@/lib/cloudinary';
 import type { BlogPostRow } from '@/lib/cms/types';
 
 export const metadata: Metadata = {
@@ -66,6 +68,18 @@ export default async function BlogPage() {
                 style={{ marginTop: 56 }}
               >
                 <div className="blog-feature-copy">
+                  {featured.coverImage && (
+                    <Image
+                      className="post-cover"
+                      src={cloudinaryTransform(featured.coverImage, { width: 1200, height: 630 })}
+                      alt={featured.title || 'Post cover'}
+                      width={1200}
+                      height={630}
+                      sizes="(max-width: 900px) 100vw, 640px"
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                      priority
+                    />
+                  )}
                   <div className="post-meta">
                     <span
                       className="post-cat"
@@ -118,6 +132,17 @@ export default async function BlogPage() {
                   href={`/blog/${post.slug}`}
                   className="post-card glass"
                 >
+                  {post.coverImage && (
+                    <Image
+                      className="post-cover"
+                      src={cloudinaryTransform(post.coverImage, { width: 800, height: 420 })}
+                      alt={post.title || 'Post cover'}
+                      width={800}
+                      height={420}
+                      sizes="(max-width: 900px) 100vw, 380px"
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                    />
+                  )}
                   <div className="post-meta">
                     <span
                       className="post-cat"

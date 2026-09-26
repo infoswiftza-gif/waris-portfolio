@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
 import { guardAdmin } from '@/lib/admin';
+import { serverError } from '@/lib/cms/http';
+import { cloudinaryConfigError, cloudinaryConfigured, cloudinaryNotConfigured, uploadImage } from '@/lib/cloudinary';
 
 /**
- * /api/upload — Vercel Blob image upload for the admin image fields.
+ * /api/upload — Cloudinary image upload for the admin image fields.
  *
  * `FileUpload` reads the chosen file as a base64 data URL and posts it as the
  * `file` form field, so this route normalises either that data URL or a real
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
   const { response } = await guardAdmin(req);
   if (response) return response;
 
+  if (!cloudinaryConfigured()) return cloudinaryNotConfigured();
+
   let form: FormData;
   try {
     form = await req.formData();
@@ -73,10 +76,15 @@ export async function POST(req: NextRequest) {
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .replace(/(\..*)?(\..*)/, '$1') || 'upload';
 
-  const { url } = await put(`cms/${Date.now()}-${safeName}`, file.data, {
-    access: 'public',
-    contentType: file.type,
-  });
+  try {
+    const { url, bytes } = await uploadImage({
+      data: file.data,
+      contentType: file.type,
+      filename: safeName,
+    });
 
-  return NextResponse.json({ ok: true, url });
+    return NextResponse.json({ ok: true, url, size: bytes });
+  } catch (err) {
+    return cloudinaryConfigError(err) ?? serverError(err);
+  }
 }

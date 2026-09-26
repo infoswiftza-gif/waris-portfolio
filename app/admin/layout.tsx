@@ -1,16 +1,28 @@
 import type { Metadata } from 'next';
 
-import { ClientHoverLink } from '../../components/AdminHoverLink';
+import { AdminNav } from './_components/AdminNav';
+import { AdminShortcuts } from './_components/AdminShortcuts';
+import { ToastProvider } from './_components/Toast';
+
+import './admin.css';
 
 /**
  * Admin shell.
  *
- * A minimal, dark, monospace-accent shell that switches the public `SiteNav`
- * for an admin-only top bar.  Children are the separate CRUD pages
- * (`/admin/login`, `/admin/projects`, `/admin/experience`, `/admin/stack`,
- * `/admin/blog`) mounted under one nav so the whole CMS feels like one place.
+ * The nav used to be five copies of the same inline-styled anchor wired through
+ * a `ClientHoverLink` that wrote to `element.style` on hover, inside ~200 lines
+ * of `style={{...}}` objects. It is a styled `<Link>` list in `admin.css` now,
+ * so it supports middle-click and cmd-click, marks the active section with
+ * `aria-current`, and its hover state is reachable by keyboard.
+ *
+ * `ToastProvider` wraps the whole shell because the confirmation feedback is
+ * now a toast rather than the dead `saved` flag the old pages carried.
+ *
+ * The section nav is a right-hand sidebar rather than a row in the header: the
+ * header only carries the brand, so the eight sections get a full-height column
+ * that does not wrap on a laptop screen. `.adm-shell` is the two-column frame
+ * and collapses back to a stacked layout on narrow viewports.
  */
-
 export const metadata: Metadata = {
   title: 'Admin · WARIS.DEV CMS',
   description: 'Content management backend for the WARIS.DEV portfolio.',
@@ -18,187 +30,33 @@ export const metadata: Metadata = {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        background: 'var(--bg)',
-        color: 'var(--ink)',
-        minHeight: '100vh',
-        fontFamily: "'Inter', 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace",
-      }}
-    >
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '14px 32px',
-          borderBottom: '1px solid var(--line)',
-          background: 'rgba(3, 5, 11, 0.86)',
-          backdropFilter: 'blur(12px)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: 'linear-gradient(180deg, var(--accent), var(--accent-blue))',
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: 14,
-              fontWeight: 700,
-              color: '#04140c',
-              flexShrink: 0,
-            }}
-          >
-            ⚙
-          </span>
-          <h1
-            style={{
-              fontFamily: '"Space Grotesk", "Inter", monospace',
-              fontWeight: 700,
-              letterSpacing: '-.03em',
-              color: 'var(--ink)',
-            }}
-          >
-            WARIS.DEV <span style={{ color: 'var(--accent)' }}>·</span> CMS
-          </h1>
+    <div className="adm">
+      <ToastProvider>
+        <AdminShortcuts />
+        <div className="adm-shell">
+          <div className="adm-col">
+            <header className="adm-top">
+              <div className="adm-brand">
+                <span className="adm-mark" aria-hidden="true">
+                  �sT
+                </span>
+                <h1 className="adm-title">
+                  WARIS.DEV <em>A�</em> CMS
+                </h1>
+              </div>
+            </header>
+
+            <main className="adm-main">{children}</main>
+
+            <footer className="adm-foot">
+              <span>WARIS.DEV CMS</span>
+              <span>v2.0 A� MongoDB + Prisma 8 A� {new Date().getFullYear()}</span>
+            </footer>
+          </div>
+
+          <AdminNav />
         </div>
-
-        <nav
-          style={{
-            display: 'flex',
-            gap: 6,
-            flexWrap: 'wrap',
-          }}
-        >
-          <ClientHoverLink
-            href="/admin"
-            className="admin-nav-link"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--line-strong)',
-              background: 'var(--surface)',
-              color: 'var(--muted)',
-              fontFamily: 'monospace',
-              fontWeight: 500,
-              fontSize: 12.5,
-              letterSpacing: '.04em',
-              textDecoration: 'none',
-              transition: 'color .2s, border-color .2s, background .2s',
-              cursor: 'pointer',
-            }}
-          >
-            Dashboard
-          </ClientHoverLink>
-          <ClientHoverLink
-            href="/admin/projects"
-            className="admin-nav-link"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--line-strong)',
-              background: 'var(--surface)',
-              color: 'var(--muted)',
-              fontFamily: 'monospace',
-              fontWeight: 500,
-              fontSize: 12.5,
-              letterSpacing: '.04em',
-              textDecoration: 'none',
-              transition: 'color .2s, border-color .2s, background .2s',
-              cursor: 'pointer',
-            }}
-          >
-            Projects
-          </ClientHoverLink>
-          <ClientHoverLink
-            href="/admin/experience"
-            className="admin-nav-link"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--line-strong)',
-              background: 'var(--surface)',
-              color: 'var(--muted)',
-              fontFamily: 'monospace',
-              fontWeight: 500,
-              fontSize: 12.5,
-              letterSpacing: '.04em',
-              textDecoration: 'none',
-              transition: 'color .2s, border-color .2s, background .2s',
-              cursor: 'pointer',
-            }}
-          >
-            Experience
-          </ClientHoverLink>
-          <ClientHoverLink
-            href="/admin/stack"
-            className="admin-nav-link"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--line-strong)',
-              background: 'var(--surface)',
-              color: 'var(--muted)',
-              fontFamily: 'monospace',
-              fontWeight: 500,
-              fontSize: 12.5,
-              letterSpacing: '.04em',
-              textDecoration: 'none',
-              transition: 'color .2s, border-color .2s, background .2s',
-              cursor: 'pointer',
-            }}
-          >
-            Stack
-          </ClientHoverLink>
-          <ClientHoverLink
-            href="/admin/blog"
-            className="admin-nav-link"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--line-strong)',
-              background: 'var(--surface)',
-              color: 'var(--muted)',
-              fontFamily: 'monospace',
-              fontWeight: 500,
-              fontSize: 12.5,
-              letterSpacing: '.04em',
-              textDecoration: 'none',
-              transition: 'color .2s, border-color .2s, background .2s',
-              cursor: 'pointer',
-            }}
-          >
-            Blog
-          </ClientHoverLink>
-        </nav>
-      </header>
-
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 36px 80px' }}>
-        {children}
-      </main>
-
-      <footer
-        style={{
-          maxWidth: 1100,
-          margin: '0 auto',
-          padding: '22px 36px',
-          borderTop: '1px solid var(--line)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: 11.5,
-          color: 'var(--muted-2)',
-          fontFamily: 'monospace',
-        }}
-      >
-        <span>WARIS.DEV CMS</span>
-        <span>v1.0 · MongoDB + Prisma 8 · {new Date().getFullYear()}</span>
-      </footer>
+      </ToastProvider>
     </div>
   );
 }

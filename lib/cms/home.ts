@@ -1,5 +1,6 @@
 import { cmsDb } from '@/prisma/db';
 import homeDefaults from '@/lib/home-defaults.json';
+import { caseStudyHref } from '@/lib/project-links';
 import { PREVIEW_VARIANTS, type PreviewVariant } from './preview';
 import type { ExperienceRow, ProjectRow, StackItemRow } from './types';
 
@@ -30,6 +31,7 @@ export type HomeProject = {
   category: string;
   visual: PreviewVariant;
   description: string;
+  imageUrl: string;
   liveUrl: string;
   caseStudyUrl: string;
   tags: string[];
@@ -64,8 +66,11 @@ const toProject = (row: ProjectRow): HomeProject => ({
   category: text(row.category),
   visual: toPreviewVariant(row.visual),
   description: text(row.description),
+  imageUrl: text(row.imageUrl),
   liveUrl: text(row.liveUrl),
-  caseStudyUrl: text(row.caseStudyUrl),
+  // Resolved, not raw: a project with no explicit case study link still gets a
+  // working one at `/projects/<slug>`, so the home page button never dead-ends.
+  caseStudyUrl: caseStudyHref({ slug: row.slug, caseStudyUrl: row.caseStudyUrl }),
   tags: (row.tags ?? []).map((tag) => String(tag)),
 });
 

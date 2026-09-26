@@ -18,6 +18,23 @@ const nextConfig = {
   // "MongoUnboundNamespace is not defined" while collecting page data for any route
   // that reaches prisma/db.ts. Keeping it external leaves it as a real Node import,
   // which is how the standalone scripts in scripts/ already load it.
+  images: {
+    // CMS uploads are stored in Cloudinary and their `secure_url` is written
+    // straight into `coverImage` / project image fields. `next/image` refuses to
+    // optimise a remote host that is not allow-listed here (it throws at
+    // render time with "hostname is not configured"), so Cloudinary's delivery
+    // host has to be listed before any public page renders those fields.
+    //
+    // The wildcard subdomain is intentional: every account gets its own
+    // `<cloud-name>` segment, so a pattern that omitted `*` would break as soon
+    // as the account name changed.
+    remotePatterns: [
+      { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
+    ],
+    // Cloudinary already negotiates format per request via `f_auto`; letting
+    // Next re-encode on top of that wastes bytes.
+    formats: ['image/avif', 'image/webp'],
+  },
   experimental: {
     serverComponentsExternalPackages: ['@prisma/orm-mongo', 'mongodb', 'bcryptjs'],
     // prisma/db.ts reads prisma/contract.json via fs.readFileSync with a path computed

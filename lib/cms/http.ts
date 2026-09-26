@@ -12,6 +12,17 @@ export function ok<T>(data: T, status = 200) {
   return NextResponse.json({ ok: true, data }, { status });
 }
 
+/**
+ * List envelope: the page of rows plus everything the admin UI needs to render
+ * pagination without a second request (`total`, `page`, `pageSize`, `hasMore`).
+ */
+export function okList<T>(
+  data: T[],
+  meta: { total: number; page: number; pageSize: number; hasMore: boolean },
+) {
+  return NextResponse.json({ ok: true, data, meta });
+}
+
 export function fail(error: string, status: number, extra?: Record<string, unknown>) {
   return NextResponse.json({ ok: false, error, ...extra }, { status });
 }
@@ -19,6 +30,26 @@ export function fail(error: string, status: number, extra?: Record<string, unkno
 export const badJson = () => fail('BAD_JSON', 400);
 export const notFound = () => fail('NOT_FOUND', 404);
 export const unique = (message: string) => fail('UNIQUE', 409, { message });
+
+export const unauthorized = () => fail('UNAUTHORIZED', 401);
+export const forbidden = () => fail('FORBIDDEN', 403);
+
+/**
+ * Any unexpected throw (a Mongo connection failure, a malformed `_id` cast, a
+ * contract mismatch) becomes a 500 in the same `{ ok: false, ... }` envelope as
+ * every other failure, instead of escaping as an unhandled rejection that the
+ * admin UI cannot tell apart from "the collection is empty".
+ *
+ * The detail is only surfaced when `CMS_DEBUG` is set, so internals (connection
+ * strings, driver stack traces) stay out of production responses.
+ */
+export function serverError(err: unknown) {
+  const detail = err instanceof Error ? err.message : String(err);
+  if (process.env.CMS_DEBUG) {
+    console.error('[cms] unhandled handler error:', err);
+  }
+  return fail('SERVER_ERROR', 500, process.env.CMS_DEBUG ? { message: detail } : undefined);
+}
 
 export function invalid(result: ZodSafeParseResult<unknown>) {
   // The project compiles with `strict: false`, where an explicit `=== false`

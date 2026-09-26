@@ -1,551 +1,67 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { STACK_CATEGORIES } from '@/lib/cms/registry';
+import { ResourceManager, type ResourceConfig } from '../_components/ResourceManager';
 
 /**
- * /admin/stack
+ * Stack / tools list.
  *
- * Technology chips CRUD for the `/stack` public page. `category` is one of
- * FRONTEND / BACKEND / DATABASE / CMS / DEPLOYMENT / OTHER and `order`
- * controls the left-to-right order on the public page.
+ * Smallest of the four screens: a name, a category and an order. It shares the
+ * exact same `ResourceManager` as blog, which is the point — the differences
+ * between these pages are now data, not code.
  */
 
-type Props = {};
-
-const CATEGORIES = ['FRONTEND', 'BACKEND', 'DATABASE', 'CMS', 'DEPLOYMENT', 'OTHER'] as const;
-const ORDER_HINT = '1 · 2 · 3 … (lower = appears first)';
-
-export default function AdminStackPage({}: Props) {
-  const [list, setList] = useState<Record<string, unknown>[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<Record<string, unknown> | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/stack');
-      const body = await res.json();
-      if (body.ok) setList(body.data || []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  function resetSaved() {
-    setSaved(false);
-    setTimeout(() => setSaved(false), 2500);
-  }
-
-  async function persist(payload: Record<string, unknown>, id?: string) {
-    setSaving(true);
-    try {
-      const method = id ? 'PUT' : 'POST';
-      const url = id ? `/api/stack/${id}` : '/api/stack';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(`Save failed: ${body.message || body.error || `status ${res.status}`}.`);
-        return;
-      }
-
-      resetSaved();
-      setEditing(null);
-      await load();
-    } catch {
-      alert('Network error. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function remove(id: string) {
-    if (!confirm('Delete this stack item? This cannot be undone.')) return;
-    try {
-      const res = await fetch(`/api/stack/${id}`, { method: 'DELETE' });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(`Delete failed: ${body.message || body.error || 'unknown error'}.`);
-        return;
-      }
-      resetSaved();
-      await load();
-    } catch {
-      alert('Network error. Please try again.');
-    }
-  }
-
-  function startEdit(item: Record<string, unknown>) {
-    setEditing({ ...item });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function cancelEdit() {
-    setEditing(null);
-  }
-
-  async function save(payload: Record<string, unknown>) {
-    if (!editingId) return;
-    await persist(payload, editingId);
-  }
-
-  const editingId = editing?._id?.toString() ?? null;
-  const toStr = (obj: Record<string, unknown>, key: string, fallback: string | number = '') => String(obj[key] ?? fallback);
-
-  if (loading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 320,
-          color: 'var(--muted)',
-          fontFamily: 'monospace',
-          fontSize: 13,
-        }}
-      >
-        Loading stack…
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <h2
-            style={{
-              fontFamily: '"Space Grotesk", "Inter", monospace',
-              fontWeight: 700,
-              letterSpacing: '-.03em',
-              margin: 0,
-              color: 'var(--ink)',
-            }}
-          >
-            Technology stack
-          </h2>
-          <p style={{ margin: 0, color: 'var(--muted)', fontSize: 13 }}>
-            {list.length} chip{list.length !== 1 ? 's' : ''} · ordered by `order` ascending.
-          </p>
-        </div>
-        {!editing && (
-          <button
-            type="button"
-            onClick={() => setEditing({})}
-            style={{
-              padding: '12px 18px',
-              borderRadius: 10,
-              border: '1px solid var(--line-strong)',
-              background: 'var(--surface)',
-              color: 'var(--ink)',
-              fontFamily: 'monospace',
-              fontWeight: 600,
-              fontSize: 13.5,
-              letterSpacing: '.06em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              transition: 'background .2s, border-color .2s, color .2s',
-              WebkitAppearance: 'none',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'var(--accent)';
-              e.currentTarget.style.color = '#04140c';
-              e.currentTarget.style.background = 'var(--accent)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--line-strong)';
-              e.currentTarget.style.color = 'var(--ink)';
-              e.currentTarget.style.background = 'var(--surface)';
-            }}
-            disabled={saving}
-          >
-            + Add chip
-          </button>
-        )}
-      </div>
-
-      <div
-        style={{
-          overflowX: 'auto',
-          borderRadius: 14,
-          border: '1px solid var(--line)',
-          background: 'var(--surface)',
-        }}
-      >
-        <table
-          style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            fontSize: 12.5,
-            fontFamily: 'monospace',
-          }}
-        >
-          <thead>
-            <tr
-              style={{
-                background: 'var(--bg-2)',
-                borderBottom: '1px solid var(--line)',
-              }}
-            >
-              {['', 'category', 'name', 'order', 'actions'].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    textAlign: h === '' ? 'center' : 'left',
-                    padding: '12px 16px',
-                    fontWeight: 600,
-                    letterSpacing: '.1em',
-                    textTransform: 'uppercase',
-                    fontSize: 11,
-                    color: 'var(--muted-2)',
-                    borderBottom: '1px solid var(--line)',
-                  }}
-                >
-                  {h || 'ID'}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((item) => {
-              const id = item._id?.toString() ?? '';
-              const category = toStr(item, 'category');
-              const name = toStr(item, 'name');
-              const order = toStr(item, 'order', 0);
-
-              return (
-                <tr
-                  key={id}
-                  style={{
-                    borderBottom: '1px solid var(--line)',
-                    transition: 'background .2s',
-                  }}
-                >
-                  <td style={{ padding: '12px 16px', color: 'var(--muted-2)' }}>{id.slice(0, 8)}</td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 999,
-                        background: 'var(--surface-2)',
-                        color: 'var(--muted)',
-                        fontFamily: 'monospace',
-                        fontWeight: 600,
-                        fontSize: 11,
-                        letterSpacing: '.06em',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {category}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 16px', fontWeight: 500, color: 'var(--ink)' }}>{name || '—'}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center', color: 'var(--muted)' }}>{order || '—'}</td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(item)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          border: '1px solid var(--line-strong)',
-                          background: 'var(--surface)',
-                          color: 'var(--ink)',
-                          fontFamily: 'monospace',
-                          fontWeight: 500,
-                          fontSize: 11.5,
-                          cursor: 'pointer',
-                          transition: 'border-color .2s, background .2s',
-                          WebkitAppearance: 'none',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--line-strong)')}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => remove(id)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          border: '1px solid var(--line-strong)',
-                          background: 'var(--surface)',
-                          color: 'var(--muted)',
-                          fontFamily: 'monospace',
-                          fontWeight: 500,
-                          fontSize: 11.5,
-                          cursor: 'pointer',
-                          transition: 'border-color .2s, color .2s',
-                          WebkitAppearance: 'none',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--danger)';
-                          e.currentTarget.style.color = 'var(--danger)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = 'var(--line-strong)';
-                          e.currentTarget.style.color = 'var(--muted)';
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {list.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--muted)' }}>
-                  No stack chips yet. Click <b>+ Add chip</b> or seed the DB.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {editing && (
-        <Form
-          key={editingId}
-          initial={editing}
-          onSave={save}
-          onCancel={cancelEdit}
-          saving={saving}
-          revision={saved ? 'saved' : 'updated'}
-        />
-      )}
-    </div>
-  );
-}
-
-function Form({
-  initial,
-  onSave,
-  onCancel,
-  saving,
-  revision,
-}: {
-  initial: Record<string, unknown>;
-  onSave: (payload: Record<string, unknown>) => Promise<void>;
-  onCancel: () => void;
-  saving: boolean;
-  revision: 'saved' | 'updated';
-}) {
-  const [form, setForm] = useState<Record<string, unknown>>(() => ({
-    category: initial.category ?? 'FRONTEND',
-    name: initial.name ?? '',
-    order: typeof initial.order === 'number' ? initial.order : 0,
-  }));
-
-  const [category, setCategory] = useState(String(form.category ?? 'FRONTEND'));
-  const [name, setName] = useState(String(form.name));
-  const [order, setOrder] = useState(String(form.order ?? 0));
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const payload = {
-      category,
-      name,
-      order: order ? Number(order) : 0,
-    } as Record<string, unknown>;
-    await onSave(payload);
-  }
-
-  return (
-    <form
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-        padding: 22,
-        borderRadius: 14,
-        border: '1px solid var(--line)',
-        background: 'var(--surface)',
-      }}
-      onSubmit={submit}
-    >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>
-            Category
-          </label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            style={{
-              ...inputStyle,
-              cursor: 'pointer',
-              fontFamily: 'monospace',
-              fontSize: 13.5,
-            }}
-            autoFocus
-          >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>
-            Order
-          </label>
-          <input
-            type="number"
-            value={order}
-            onChange={(e) => setOrder(e.target.value)}
-            placeholder="1"
-            style={inputStyle}
-          />
-          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-2)' }}>{ORDER_HINT}</p>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <label style={{ fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted-2)' }}>
-          Name *
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="React"
-          style={inputStyle}
-        />
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          gap: 12,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        <button
-          type="submit"
-          disabled={saving}
-          style={{
-            padding: '12px 20px',
-            borderRadius: 10,
-            border: '1px solid var(--line-strong)',
-            background: 'var(--surface)',
-            color: 'var(--ink)',
-            fontFamily: 'monospace',
-            fontWeight: 600,
-            fontSize: 13.5,
-            letterSpacing: '.06em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            transition: 'background .2s, border-color .2s, color .2s, transform .2s',
-            WebkitAppearance: 'none',
-          }}
-          onMouseEnter={(e) => {
-            if (saving) return;
-            e.currentTarget.style.borderColor = 'var(--accent)';
-            e.currentTarget.style.color = '#04140c';
-            e.currentTarget.style.background = 'var(--accent)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--line-strong)';
-            e.currentTarget.style.color = 'var(--ink)';
-            e.currentTarget.style.background = 'var(--surface)';
-          }}
-          onMouseDown={(e) => {
-            if (saving) return;
-            e.currentTarget.style.transform = 'translateY(1px)';
-          }}
-          onMouseUp={(e) => {
-            if (saving) return;
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-        >
-          {saving ? 'Saving…' : 'Save chip'}
-        </button>
-        {revision === 'saved' && (
-          <span
-            style={{
-              padding: '10px 16px',
-              borderRadius: 10,
-              background: 'rgba(100,245,176,.12)',
-              border: '1px solid var(--accent)',
-              color: 'var(--accent)',
-              fontFamily: 'monospace',
-              fontSize: 12,
-              letterSpacing: '.04em',
-            }}
-          >
-            ✓ Saved
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={onCancel}
-          style={{
-            padding: '12px 18px',
-            borderRadius: 10,
-            border: '1px solid var(--line-strong)',
-            background: 'transparent',
-            color: 'var(--muted)',
-            fontFamily: 'monospace',
-            fontWeight: 500,
-            fontSize: 13.5,
-            cursor: 'pointer',
-            transition: 'color .2s, border-color .2s',
-            WebkitAppearance: 'none',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--ink)';
-            e.currentTarget.style.borderColor = 'var(--line)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--muted)';
-            e.currentTarget.style.borderColor = 'var(--line-strong)';
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
-  );
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '11px 13px',
-  borderRadius: 10,
-  border: '1px solid var(--line-strong)',
-  background: 'var(--bg-2)',
-  color: 'var(--ink)',
-  fontFamily: 'monospace',
-  fontSize: 13.5,
-  outline: 'none',
-  transition: 'border-color .2s, box-shadow .2s',
+const config: ResourceConfig = {
+  resource: 'stack',
+  title: 'Stack',
+  singular: 'Item',
+  plural: 'items',
+  description: 'Tools and technologies, grouped by category. Everything here is public.',
+  hasPublished: false,
+  sortable: ['order', 'name', 'category'],
+  publicPath: '/stack',
+  emptyHint: 'No stack items yet.',
+  defaults: {
+    name: '',
+    category: 'FRONTEND',
+    order: 0,
+  },
+  columns: [
+    {
+      key: 'name',
+      label: 'Name',
+      sortKey: 'name',
+      className: 'adm-td-title',
+      render: (row) => String(row.name ?? ''),
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      sortKey: 'category',
+      render: (row) => <span className="adm-badge">{String(row.category ?? '')}</span>,
+    },
+    {
+      key: 'order',
+      label: 'Order',
+      sortKey: 'order',
+      className: 'adm-td-num',
+      render: (row) => String(row.order ?? 0),
+    },
+  ],
+  fields: [
+    { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Next.js' },
+    {
+      name: 'category',
+      label: 'Category',
+      type: 'select',
+      half: true,
+      required: true,
+      options: STACK_CATEGORIES,
+    },
+    { name: 'order', label: 'Order', type: 'number', half: true, hint: 'Lower numbers first.' },
+  ],
 };
+
+export default function StackAdminPage() {
+  return <ResourceManager config={config} />;
+}

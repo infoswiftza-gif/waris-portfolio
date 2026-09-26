@@ -101,6 +101,29 @@ export const contract = defineContract(
           updatedAt: field.date().optional(),
         },
       }),
+      /**
+       * Append-only trail of every admin mutation, written by the CMS
+       * handlers in `lib/cms/factory.ts` after a successful write.
+       *
+       * `before`/`after` hold the JSON snapshot of the fields the request
+       * actually touched, so the admin audit viewer can show a real diff
+       * without needing the current document to still exist (a delete keeps
+       * its `before` snapshot, which is the only copy left of the record).
+       */
+      AuditLog: model('AuditLog', {
+        collection: 'audit_log',
+        fields: {
+          _id: field.objectId(),
+          action: field.string().optional(),
+          resource: field.string().optional(),
+          recordId: field.string().optional(),
+          label: field.string().optional(),
+          actor: field.string().optional(),
+          before: field.string().optional(),
+          after: field.string().optional(),
+          createdAt: field.date().optional(),
+        },
+      }),
     },
   }),
 );

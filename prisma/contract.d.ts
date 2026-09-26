@@ -18,7 +18,7 @@ import type {
 } from '@prisma/orm-mongo/contract/types';
 
 export type StorageHash =
-  StorageHashBase<'f8ec32331bf14df85af2be78842e4bd22ba3de422af6295e3d1cc3874fba4f95'>;
+  StorageHashBase<'2fca83ead9892aae268ba4546d290a54bd9e12a6aa0c2b563f3ab9c7965a2f90'>;
 export type ExecutionHash = ExecutionHashBase<string>;
 export type ProfileHash =
   ProfileHashBase<'251b3ce23f6c9f561892e7c1af9d2cc941a13d64ba1aa7226b90036b09568cc3'>;
@@ -42,6 +42,17 @@ export type FieldOutputTypes = {
       readonly passwordHash: CodecTypes['mongo/string@1']['output'] | null;
       readonly role: CodecTypes['mongo/string@1']['output'] | null;
       readonly updatedAt: CodecTypes['mongo/date@1']['output'] | null;
+    };
+    readonly AuditLog: {
+      readonly _id: CodecTypes['mongo/objectId@1']['output'];
+      readonly action: CodecTypes['mongo/string@1']['output'] | null;
+      readonly actor: CodecTypes['mongo/string@1']['output'] | null;
+      readonly after: CodecTypes['mongo/string@1']['output'] | null;
+      readonly before: CodecTypes['mongo/string@1']['output'] | null;
+      readonly createdAt: CodecTypes['mongo/date@1']['output'] | null;
+      readonly label: CodecTypes['mongo/string@1']['output'] | null;
+      readonly recordId: CodecTypes['mongo/string@1']['output'] | null;
+      readonly resource: CodecTypes['mongo/string@1']['output'] | null;
     };
     readonly BlogPost: {
       readonly _id: CodecTypes['mongo/objectId@1']['output'];
@@ -111,6 +122,17 @@ export type FieldInputTypes = {
       readonly passwordHash: CodecTypes['mongo/string@1']['input'] | null;
       readonly role: CodecTypes['mongo/string@1']['input'] | null;
       readonly updatedAt: CodecTypes['mongo/date@1']['input'] | null;
+    };
+    readonly AuditLog: {
+      readonly _id: CodecTypes['mongo/objectId@1']['input'];
+      readonly action: CodecTypes['mongo/string@1']['input'] | null;
+      readonly actor: CodecTypes['mongo/string@1']['input'] | null;
+      readonly after: CodecTypes['mongo/string@1']['input'] | null;
+      readonly before: CodecTypes['mongo/string@1']['input'] | null;
+      readonly createdAt: CodecTypes['mongo/date@1']['input'] | null;
+      readonly label: CodecTypes['mongo/string@1']['input'] | null;
+      readonly recordId: CodecTypes['mongo/string@1']['input'] | null;
+      readonly resource: CodecTypes['mongo/string@1']['input'] | null;
     };
     readonly BlogPost: {
       readonly _id: CodecTypes['mongo/objectId@1']['input'];
@@ -183,6 +205,18 @@ export namespace Models {
     updatedAt: CodecTypes['mongo/date@1']['output'] | null;
     readonly [RelationKeys]?: never;
   };
+  export type unbound_AuditLog = {
+    _id: CodecTypes['mongo/objectId@1']['output'];
+    action: CodecTypes['mongo/string@1']['output'] | null;
+    actor: CodecTypes['mongo/string@1']['output'] | null;
+    after: CodecTypes['mongo/string@1']['output'] | null;
+    before: CodecTypes['mongo/string@1']['output'] | null;
+    createdAt: CodecTypes['mongo/date@1']['output'] | null;
+    label: CodecTypes['mongo/string@1']['output'] | null;
+    recordId: CodecTypes['mongo/string@1']['output'] | null;
+    resource: CodecTypes['mongo/string@1']['output'] | null;
+    readonly [RelationKeys]?: never;
+  };
   export type unbound_BlogPost = {
     _id: CodecTypes['mongo/objectId@1']['output'];
     content: CodecTypes['mongo/string@1']['output'] | null;
@@ -242,6 +276,7 @@ export declare const models: {
   __unbound__: {
     AboutContent: Models.unbound_AboutContent;
     Admin: Models.unbound_Admin;
+    AuditLog: Models.unbound_AuditLog;
     BlogPost: Models.unbound_BlogPost;
     Experience: Models.unbound_Experience;
     Project: Models.unbound_Project;
@@ -261,6 +296,7 @@ type ContractBase = Omit<
           readonly collection: {
             readonly about_content: MongoCollection;
             readonly admins: MongoCollection;
+            readonly audit_log: MongoCollection;
             readonly blog_posts: MongoCollection;
             readonly experience: MongoCollection;
             readonly projects: MongoCollection;
@@ -281,6 +317,10 @@ type ContractBase = Omit<
       readonly model: 'AboutContent';
     };
     readonly admins: { readonly namespace: '__unbound__' & NamespaceId; readonly model: 'Admin' };
+    readonly audit_log: {
+      readonly namespace: '__unbound__' & NamespaceId;
+      readonly model: 'AuditLog';
+    };
     readonly blog_posts: {
       readonly namespace: '__unbound__' & NamespaceId;
       readonly model: 'BlogPost';
@@ -361,6 +401,48 @@ type ContractBase = Omit<
             };
             readonly relations: Record<string, never>;
             readonly storage: { readonly collection: 'admins' };
+          };
+          readonly AuditLog: {
+            readonly fields: {
+              readonly _id: {
+                readonly nullable: false;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/objectId@1' };
+              };
+              readonly action: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/string@1' };
+              };
+              readonly actor: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/string@1' };
+              };
+              readonly after: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/string@1' };
+              };
+              readonly before: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/string@1' };
+              };
+              readonly createdAt: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/date@1' };
+              };
+              readonly label: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/string@1' };
+              };
+              readonly recordId: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/string@1' };
+              };
+              readonly resource: {
+                readonly nullable: true;
+                readonly type: { readonly kind: 'scalar'; readonly codecId: 'mongo/string@1' };
+              };
+            };
+            readonly relations: Record<string, never>;
+            readonly storage: { readonly collection: 'audit_log' };
           };
           readonly BlogPost: {
             readonly fields: {

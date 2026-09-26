@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import SiteBehaviors from '@/components/SiteBehaviors';
 import PageHead from '@/components/PageHead';
 import { cmsDb } from '@/prisma/db';
+import { cloudinaryTransform } from '@/lib/cloudinary';
+import { caseStudyHref } from '@/lib/project-links';
 import type { ProjectRow } from '@/lib/cms/types';
 
 export const metadata: Metadata = {
@@ -86,7 +89,21 @@ export default async function ProjectsPage() {
                     className="p-visual"
                     style={{ background: 'var(--bg-2)', borderColor: 'var(--line)' }}
                   >
-                    {/* Visual is decorative — the on-image intent is carried by
+                    {/* A real uploaded screenshot wins over the decorative
+                    mockup. `visual` only picks which mockup to draw when there
+                    is no image, exactly like the home page does. */}
+                    {project.imageUrl ? (
+                      <Image
+                        src={cloudinaryTransform(project.imageUrl, { width: 1200, height: 750 })}
+                        alt={`${project.title || 'Project'} screenshot`}
+                        width={1200}
+                        height={750}
+                        sizes="(max-width: 900px) 100vw, 560px"
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                      />
+                    ) : (
+                      <>
+                    {/* Visual is decorative �?" the on-image intent is carried by
                     the imageUrl / liveUrl fields. Render an inline SVG so the
                     page never 404s on a missing file. The `visual` field picks
                     which mockup to draw, exactly like the home page does. */}
@@ -131,6 +148,8 @@ export default async function ProjectsPage() {
                         </div>
                       </div>
                     </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="p-info">
@@ -155,7 +174,7 @@ export default async function ProjectsPage() {
                       )}
                       <Link
                         className="btn btn-ghost btn-sm magnetic"
-                        href={`/projects/${project.slug || project.title}`}
+                        href={caseStudyHref({ slug: project.slug, caseStudyUrl: project.caseStudyUrl })}
                         aria-label={`Open ${project.title} case study`}
                       >
                         Case Study <span className="arr">↗</span>

@@ -1,20 +1,20 @@
 import type { NextRequest } from 'next/server';
-import { handleDelete, handlePut } from '@/lib/cms/experience';
-
-/**
- * PUT    /api/experience/[id] — update one entry (admin only).
- * DELETE /api/experience/[id] — remove one entry (admin only).
- */
+import { get, remove, update } from '@/lib/cms/experience';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type Ctx = { params: { id: string } };
 
+/** GET / PUT / DELETE a single experience entry (admin only). */
+export async function GET(req: NextRequest, { params }: Ctx) {
+  return get(req, params.id);
+}
+
 export async function PUT(req: NextRequest, { params }: Ctx) {
-  return handlePut(req, params.id);
+  return update(req, params.id);
 }
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
-  return handleDelete(req, params.id);
+  return remove(req, params.id);
 }

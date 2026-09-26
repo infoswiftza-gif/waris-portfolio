@@ -1,20 +1,20 @@
 import type { NextRequest } from 'next/server';
-import { handleDelete, handlePut } from '@/lib/cms/projects';
-
-/**
- * PUT    /api/projects/[id] — update one project (admin only).
- * DELETE /api/projects/[id] — remove one project (admin only).
- */
+import { get, remove, update } from '@/lib/cms/projects';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type Ctx = { params: { id: string } };
 
+/** GET / PUT / DELETE a single project (admin only). */
+export async function GET(req: NextRequest, { params }: Ctx) {
+  return get(req, params.id);
+}
+
 export async function PUT(req: NextRequest, { params }: Ctx) {
-  return handlePut(req, params.id);
+  return update(req, params.id);
 }
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
-  return handleDelete(req, params.id);
+  return remove(req, params.id);
 }
