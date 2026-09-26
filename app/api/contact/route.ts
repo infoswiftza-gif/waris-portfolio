@@ -14,12 +14,30 @@ const SMTP = {
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const GMAIL_HOSTS = new Set(['smtp.gmail.com', 'smtp.googlemail.com']);
 const lastSent = new Map<string, number>();
 const RATE_MS = 2 * 60 * 1000;
 
+// Gmail App Passwords are always exactly 16 lowercase letters, shown as
+// 4 groups of 4. Copy/paste slips routinely add or drop a character, which
+// Gmail then rejects with an opaque 535-5.7.8 at send time.
+function passProblem(): string | null {
+  if (!SMTP.pass || SMTP.pass.startsWith('REPLACE_')) return 'SMTP_PASS missing or still the placeholder';
+  if (!GMAIL_HOSTS.has(SMTP.host.toLowerCase())) return null;
+  const compact = SMTP.pass.replace(/\s+/g, '');
+  if (!/^[a-z]{16}$/.test(compact)) {
+    return `SMTP_PASS is not a valid Gmail App Password (${compact.length} chars, expected 16 lowercase letters)`;
+  }
+  return null;
+}
+
 function ok() {
-  const hasPass = !!SMTP.pass && !SMTP.pass.startsWith('REPLACE_');
-  return !!TO && !!SMTP.user && hasPass && !!EMAIL_RE.test(TO);
+  const problem = passProblem();
+  if (problem) {
+    console.error(`[contact] SMTP not configured: ${problem}`);
+    return false;
+  }
+  return !!TO && !!SMTP.user && !!EMAIL_RE.test(TO);
 }
 
 function throttleKey(ip?: string, email?: string) {
@@ -81,7 +99,7 @@ export async function POST(req: Request) {
     host: SMTP.host,
     port: SMTP.port,
     secure: SMTP.port === 465,
-    auth: { user: SMTP.user, pass: SMTP.pass },
+    auth: { user: SMTP.user, pass: SMTP.pass.replace(/\s+/g, '') },
   });
 
   const sentAt = new Date().toLocaleString('en-GB', {
@@ -134,8 +152,11 @@ https://waris.dev`,
     } catch (err) {
       console.error('[contact] auto-reply failed:', err);
     }
-  } catch (err) {
-    console.error('[contact] mail failed:', err);
+  } catch (err: any) {
+    console.error(
+      `[contact] mail failed (code=${err?.code || 'n/a'}) — smtp=${SMTP.host}:${SMTP.port} user=${SMTP.user}`,
+      err?.message || err
+    );
     lastSent.delete(key);
     return NextResponse.json(
       { ok: false, error: 'MAIL', message: 'Message could not be delivered. Try again shortly.' },
