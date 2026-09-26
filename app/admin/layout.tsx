@@ -38,10 +38,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <header className="adm-top">
               <div className="adm-brand">
                 <span className="adm-mark" aria-hidden="true">
-                  �sT
+                  ⚙
                 </span>
                 <h1 className="adm-title">
-                  WARIS.DEV <em>A�</em> CMS
+                  WARIS.DEV <em>·</em> CMS
                 </h1>
               </div>
             </header>
@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             <footer className="adm-foot">
               <span>WARIS.DEV CMS</span>
-              <span>v2.0 A� MongoDB + Prisma 8 A� {new Date().getFullYear()}</span>
+              <span>v2.0 · MongoDB + Prisma 8 · {new Date().getFullYear()}</span>
             </footer>
           </div>
 

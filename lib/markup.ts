@@ -439,10 +439,10 @@ const renderProjects = (projects: HomeProject[]) => {
 
       const actions = [
         liveHref
-          ? `<a class="btn btn-primary btn-sm magnetic" href="${liveHref}" target="_blank" rel="noopener" aria-label="View ${esc(project.title)} project">View Project <span class="arr">�+'</span></a>`
+          ? `<a class="btn btn-primary btn-sm magnetic" href="${liveHref}" target="_blank" rel="noopener" aria-label="View ${esc(project.title)} project">View Project <span class="arr">→</span></a>`
           : '',
         caseStudyHref
-          ? `<a class="btn btn-ghost btn-sm magnetic" href="${caseStudyHref}" aria-label="Open ${esc(project.title)} case study">Case Study <span class="arr">�+-</span></a>`
+          ? `<a class="btn btn-ghost btn-sm magnetic" href="${caseStudyHref}" aria-label="Open ${esc(project.title)} case study">Case Study <span class="arr">↗</span></a>`
           : '',
       ].join('');
 

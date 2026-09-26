@@ -103,7 +103,7 @@ export default async function ProjectsPage() {
                       />
                     ) : (
                       <>
-                    {/* Visual is decorative �?" the on-image intent is carried by
+                    {/* Visual is decorative - the on-image intent is carried by
                     the imageUrl / liveUrl fields. Render an inline SVG so the
                     page never 404s on a missing file. The `visual` field picks
                     which mockup to draw, exactly like the home page does. */}
