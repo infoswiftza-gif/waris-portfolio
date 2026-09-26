@@ -99,14 +99,28 @@ const toStackGroups = (rows: StackItemRow[]): HomeStackGroup[] => {
 };
 
 export async function loadHomeContent(): Promise<HomeContent> {
-  const db = await cmsDb();
+  // A transient Mongo error here (timeout, network blip, connection reset)
+  // previously propagated straight out of this function, through the page
+  // component, and became an unhandled 500 — with no fallback despite the
+  // home-defaults.json below being written specifically to cover this case.
+  // Any read failure now degrades to the same defaults used for a genuinely
+  // empty database, instead of crashing the page.
+  let projectRows: ProjectRow[] = [];
+  let experienceRows: ExperienceRow[] = [];
+  let stackRows: StackItemRow[] = [];
 
-  // The generated client's `.all()` resolves to an `AsyncIterableResult`, so
-  // the `Promise.all` below would not await it — each query is awaited first and
-  // then cast to its row type.
-  const projectRows = (await db.orm.projects.orderBy({ order: 1 }).limit(99).all()) as unknown as ProjectRow[];
-  const experienceRows = (await db.orm.experience.orderBy({ order: 1 }).limit(50).all()) as unknown as ExperienceRow[];
-  const stackRows = (await db.orm.stack_items.orderBy({ order: 1 }).limit(99).all()) as unknown as StackItemRow[];
+  try {
+    const db = await cmsDb();
+
+    // The generated client's `.all()` resolves to an `AsyncIterableResult`, so
+    // the `Promise.all` below would not await it — each query is awaited first and
+    // then cast to its row type.
+    projectRows = (await db.orm.projects.orderBy({ order: 1 }).limit(99).all()) as unknown as ProjectRow[];
+    experienceRows = (await db.orm.experience.orderBy({ order: 1 }).limit(50).all()) as unknown as ExperienceRow[];
+    stackRows = (await db.orm.stack_items.orderBy({ order: 1 }).limit(99).all()) as unknown as StackItemRow[];
+  } catch (err) {
+    console.error('[loadHomeContent] falling back to home-defaults.json after DB error:', err);
+  }
 
   const published = projectRows.filter((row) => row.published === true);
 

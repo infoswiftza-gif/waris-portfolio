@@ -21,11 +21,18 @@ export default async function ExperiencePage() {
   // editor arranged it.  The `Experience` model has no `published` field, so
   // every entry is public and the admin can toggle drafts only on projects
   // and blog posts.
-  const db = await cmsDb();
-  const experience = (await db.orm.experience
-    .orderBy({ order: 1 })
-    .limit(50)
-    .all()) as ExperienceRow[];
+  // A transient DB error degrades to an empty timeline instead of crashing
+  // the whole page with a 500.
+  let experience: ExperienceRow[] = [];
+  try {
+    const db = await cmsDb();
+    experience = (await db.orm.experience
+      .orderBy({ order: 1 })
+      .limit(50)
+      .all()) as ExperienceRow[];
+  } catch (err) {
+    console.error('[ExperiencePage] falling back to empty list after DB error:', err);
+  }
 
   return (
     <>

@@ -20,12 +20,20 @@ export default async function BlogPage() {
   // All published posts, newest first.  The editor toggles `published` in the
   // CMS; drafts never reach this page.  `orderBy` compiles a single sort key,
   // so newest-first is applied on `publishedAt` and creation time breaks ties.
-  const db = await cmsDb();
-  const published = (await db.orm.blog_posts
-    .where({ published: true })
-    .orderBy({ publishedAt: -1 })
-    .limit(99)
-    .all()) as BlogPostRow[];
+  // A transient DB error degrades to an empty post list instead of crashing
+  // the whole page with a 500. `featured` below is already guarded with
+  // `featured &&`, so an empty array here is safe.
+  let published: BlogPostRow[] = [];
+  try {
+    const db = await cmsDb();
+    published = (await db.orm.blog_posts
+      .where({ published: true })
+      .orderBy({ publishedAt: -1 })
+      .limit(99)
+      .all()) as BlogPostRow[];
+  } catch (err) {
+    console.error('[BlogPage] falling back to empty list after DB error:', err);
+  }
 
   const posts: BlogPostRow[] = [...published].sort(
     (a, b) => new Date(b.publishedAt ?? 0).getTime() - new Date(a.publishedAt ?? 0).getTime(),

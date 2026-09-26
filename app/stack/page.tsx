@@ -49,8 +49,15 @@ function groupByCategory(items: StackItemRow[]) {
 }
 
 export default async function StackPage() {
-  const db = await cmsDb();
-  const items = (await db.orm.stack_items.orderBy({ order: 1 }).limit(99).all()) as StackItemRow[];
+  // A transient DB error degrades to an empty stack list instead of crashing
+  // the whole page with a 500.
+  let items: StackItemRow[] = [];
+  try {
+    const db = await cmsDb();
+    items = (await db.orm.stack_items.orderBy({ order: 1 }).limit(99).all()) as StackItemRow[];
+  } catch (err) {
+    console.error('[StackPage] falling back to empty list after DB error:', err);
+  }
   const panels = groupByCategory(items);
 
   return (

@@ -19,12 +19,19 @@ export const dynamic = 'force-dynamic';
 export default async function ProjectsPage() {
   // Fetch from MongoDB (Prisma 8 query builder) and filter `published: true`.
   // Ordered by `order` ascending so editors control the on-page sequence.
-  const db = await cmsDb();
-  const projects = (await db.orm.projects
-    .where({ published: true })
-    .orderBy({ order: 1 })
-    .limit(99)
-    .all()) as ProjectRow[];
+  // A transient DB error degrades to the existing "no projects yet" empty
+  // state below, instead of crashing the whole page with a 500.
+  let projects: ProjectRow[] = [];
+  try {
+    const db = await cmsDb();
+    projects = (await db.orm.projects
+      .where({ published: true })
+      .orderBy({ order: 1 })
+      .limit(99)
+      .all()) as ProjectRow[];
+  } catch (err) {
+    console.error('[ProjectsPage] falling back to empty list after DB error:', err);
+  }
 
   return (
     <>

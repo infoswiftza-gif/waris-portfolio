@@ -28,12 +28,24 @@ export const dynamicParams = true;
 /** On-demand renders are cached, so a cold database costs one request, not one per visit. */
 export const revalidate = 300;
 
-/** Every query here is scoped to published posts so drafts stay private. */
+/**
+ * Every query here is scoped to published posts so drafts stay private.
+ *
+ * A transient DB error is treated the same as "not found" rather than
+ * propagating into a hard 500 — a 404 for a post that briefly can't be
+ * fetched is a much softer failure for a reader than a crashed page, and the
+ * error is still logged server-side for diagnosis.
+ */
 async function findPublishedPost(slug: string): Promise<BlogPostRow | null> {
-  const db = await cmsDb();
-  return ((await db.orm.blog_posts
-    .where({ slug, published: true })
-    .first()) ?? null) as BlogPostRow | null;
+  try {
+    const db = await cmsDb();
+    return ((await db.orm.blog_posts
+      .where({ slug, published: true })
+      .first()) ?? null) as BlogPostRow | null;
+  } catch (err) {
+    console.error(`[BlogPostPage] findPublishedPost(${slug}) failed:`, err);
+    return null;
+  }
 }
 
 /**
@@ -162,12 +174,20 @@ export default async function BlogPostPage({
   }
 
   // Older/newer navigation walks the published list, not the heading ids.
-  const db = await cmsDb();
-  const siblings = (await db.orm.blog_posts
-    .where({ published: true })
-    .orderBy({ publishedAt: -1 })
-    .limit(999)
-    .all()) as BlogPostRow[];
+  // A transient DB error here just hides this nav block (older/newer stay
+  // undefined, already guarded below with `older?.slug &&`) instead of
+  // crashing a page that otherwise rendered fine from `post` above.
+  let siblings: BlogPostRow[] = [];
+  try {
+    const db = await cmsDb();
+    siblings = (await db.orm.blog_posts
+      .where({ published: true })
+      .orderBy({ publishedAt: -1 })
+      .limit(999)
+      .all()) as BlogPostRow[];
+  } catch (err) {
+    console.error(`[BlogPostPage] siblings query failed for ${slug}:`, err);
+  }
   const index = siblings.findIndex((row) => String(row.slug ?? '') === slug);
   const older = index >= 0 ? siblings[index + 1] : undefined;
   const newer = index > 0 ? siblings[index - 1] : undefined;
