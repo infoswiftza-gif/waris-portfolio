@@ -33,70 +33,73 @@ const dbName = dbNameFromUrl(databaseUrl);
 declare global {
   // eslint-disable-next-line no-var
   var __MONGO_CLIENT__: MongoClient | undefined;
-}
-
-/**
- * Shared MongoClient, capped to a small pool, reused across invocations
- * within the same serverless container via globalThis.
- *
- * Previously `cms` was constructed with `{ url }`, which lets Prisma 8 open
- * its own MongoClient (default pool size 100) per container. Next.js
- * prefetches every in-viewport <Link>, so loading one page fires several
- * concurrent route requests; if enough of those land on fresh/cold
- * containers at once, each opening a ~100-connection pool, the MongoDB
- * Atlas M0 (free tier) connection ceiling gets exhausted and requests start
- * failing with a 500 — intermittently, since it only happens under bursts
- * of concurrent cold starts. Capping maxPoolSize keeps each container's
- * footprint small enough that this can't happen.
- */
-const mongoClient =
-  globalThis.__MONGO_CLIENT__ ??
-  new MongoClient(databaseUrl, {
-    maxPoolSize: 5,
-    minPoolSize: 0,
-    maxIdleTimeMS: 10_000,
-    serverSelectionTimeoutMS: 5_000,
-  });
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.__MONGO_CLIENT__ = mongoClient;
-}
-
-/**
- * Prisma 8 MongoDB client singleton.
- *
- * The contract is bound at runtime. `cms.orm.<Model>` is the query builder,
- * `cms.query.<Model>` emits the lowered MongoDB pipeline, and `cms.connect(...)`
- * resolves the live driver when a request/process starts.
- */
-export const cms = mongo({
-  contractJson,
-  mongoClient,
-  dbName,
-});
-
-declare global {
   // eslint-disable-next-line no-var
-  var __CMS_DB__: typeof cms;
-}
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.__CMS_DB__ = cms;
+  var __CMS_DB__: ReturnType<typeof mongo> | undefined;
 }
 
 /**
- * Request-scoped database access.
+ * Prisma 8 MongoDB client singleton — constructed lazily, inside cmsDb(),
+ * not at module top level.
  *
- * `connect()` throws `DRIVER.ALREADY_CONNECTED` when the driver is already
- * bound, so it is invoked at most once per process and the resulting promise
- * is reused. Call this inside every route/page so Prisma 8 connects once and
- * reuses the runtime for the whole request.
+ * `new MongoClient(...)` and `mongo({...})` both throw *synchronously* if
+ * given a malformed connection string. Constructing them at module top level
+ * means that throw happens the instant this module is imported — before
+ * cmsDb()'s own try/catch, and before every page's try/catch around it, ever
+ * get a chance to run — turning any DATABASE_URL problem into a guaranteed,
+ * uncatchable 500 on every single request. Building both lazily here, on
+ * first call, turns the same failure into a normal rejected promise that
+ * every caller's existing try/catch already handles.
+ *
+ * `cms.orm.<Model>` is the query builder, `cms.query.<Model>` emits the
+ * lowered MongoDB pipeline, and `cms.connect(...)` resolves the live driver
+ * when a request/process starts.
  */
 let connectPromise: Promise<unknown> | null = null;
+let cmsSingleton: ReturnType<typeof mongo> | null = globalThis.__CMS_DB__ ?? null;
+let activeMongoClient: MongoClient | null = globalThis.__MONGO_CLIENT__ ?? null;
 
 export async function cmsDb() {
+  if (!cmsSingleton) {
+    // Shared MongoClient, capped to a small pool, reused across invocations
+    // within the same serverless container via globalThis. Previously `cms`
+    // was constructed with `{ url }`, which lets Prisma 8 open its own
+    // MongoClient (default pool size 100) per container. Next.js prefetches
+    // every in-viewport <Link>, so loading one page fires several concurrent
+    // route requests; if enough of those land on fresh/cold containers at
+    // once, each opening a ~100-connection pool, the MongoDB Atlas M0
+    // (free tier) connection ceiling gets exhausted. Capping maxPoolSize
+    // keeps each container's footprint small enough that this can't happen.
+    const mongoClient =
+      activeMongoClient ??
+      new MongoClient(databaseUrl, {
+        maxPoolSize: 5,
+        minPoolSize: 0,
+        maxIdleTimeMS: 10_000,
+        serverSelectionTimeoutMS: 5_000,
+      });
+    activeMongoClient = mongoClient;
+
+    if (process.env.NODE_ENV !== 'production') {
+      globalThis.__MONGO_CLIENT__ = mongoClient;
+    }
+
+    cmsSingleton = mongo({ contractJson, mongoClient, dbName });
+
+    if (process.env.NODE_ENV !== 'production') {
+      globalThis.__CMS_DB__ = cmsSingleton;
+    }
+  }
+
+  const cms = cmsSingleton;
+
+  /**
+   * `connect()` throws `DRIVER.ALREADY_CONNECTED` when the driver is already
+   * bound, so it is invoked at most once per process and the resulting
+   * promise is reused. Call this inside every route/page so Prisma 8
+   * connects once and reuses the runtime for the whole request.
+   */
   if (!connectPromise) {
-    connectPromise = cms.connect({ mongoClient, dbName });
+    connectPromise = cms.connect({ mongoClient: activeMongoClient, dbName });
   }
   try {
     await connectPromise;
@@ -106,6 +109,15 @@ export async function cmsDb() {
   }
   return cms;
 }
+
+export const cms = new Proxy({} as ReturnType<typeof mongo>, {
+  get(_target, prop) {
+    if (!cmsSingleton) {
+      throw new Error('Access prisma/db.ts `cms` only after calling cmsDb() at least once.');
+    }
+    return (cmsSingleton as unknown as Record<string | symbol, unknown>)[prop];
+  },
+});
 
 export type PrismaDb = typeof cms;
 
