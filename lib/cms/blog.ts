@@ -28,7 +28,9 @@ const BlogPostSchema = z.object({
   slug: z.string().min(1).max(255).optional(),
   excerpt: z.string().max(3000),
   content: z.string().min(1),
-  coverImage: z.string().max(500).optional(),
+  // The admin form uses `null` for "no cover image", so this has to accept it —
+  // `null` is also how an existing cover gets cleared on update.
+  coverImage: z.string().max(500).nullish(),
   tags: z.array(z.string()).max(20),
   published: z.boolean().optional(),
 });
@@ -109,7 +111,7 @@ export async function handlePut(req: NextRequest, id: string) {
     ...(incomingSlug && { slug: incomingSlug }),
     ...(input.excerpt !== undefined && { excerpt: input.excerpt.trim() }),
     ...(input.content !== undefined && { content: input.content }),
-    ...(input.coverImage !== undefined && { coverImage: input.coverImage.trim() }),
+    ...(input.coverImage !== undefined && { coverImage: input.coverImage?.trim() ?? null }),
     ...(input.tags !== undefined && { tags: input.tags }),
     ...(input.published !== undefined && { published: input.published }),
   };

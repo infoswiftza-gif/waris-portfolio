@@ -78,7 +78,15 @@ export default function AdminBlogPage({}: Props) {
 
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(`Save failed: ${json.message || json.error || `status ${res.status}`}.`);
+        // VALIDATION comes with a per-field `fields` map; surfacing it beats a
+        // bare error code when the API is the one rejecting the payload.
+        const detail =
+          json.error === 'VALIDATION' && json.fields
+            ? Object.entries(json.fields as Record<string, string[]>)
+                .map(([key, msgs]) => `${key} ${msgs.join(', ')}`)
+                .join('; ')
+            : '';
+        alert(`Save failed: ${json.message || detail || json.error || `status ${res.status}`}.`);
         return;
       }
 
@@ -436,7 +444,7 @@ function BlogForm({
   const [slugInput, setSlugInput] = useState(String(post.slug ?? ''));
   const [excerpt, setExcerpt] = useState(String(post.excerpt ?? ''));
   const [content, setContent] = useState(String(post.content ?? ''));
-  const [tags, setTags] = useState<string[]>(post.tags as string[]);
+  const [tags, setTags] = useState<string[]>(Array.isArray(post.tags) ? post.tags.map(String) : []);
   const [published, setPublished] = useState(Boolean(post.published));
   const [publishedAt] = useState(() =>
     post.publishedAt ? new Date(post.publishedAt as string).toISOString().slice(0, 16) : '',
